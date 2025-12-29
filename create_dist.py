@@ -1,0 +1,383 @@
+#!/usr/bin/env python3
+"""
+Create a stripped-down distribution zip file containing only the files
+needed to run KeyKit in the browser.
+
+Run this script from the main keykitcanvas repository directory.
+
+Usage:
+    python create_dist.py <output_zipfile>
+
+Example:
+    python create_dist.py keykit_dist.zip
+"""
+
+import os
+import sys
+import json
+import zipfile
+import subprocess
+
+
+def run_build_steps(repo_path):
+    """Run manifest generation and WASM build before creating the distribution."""
+
+    print("=" * 50)
+    print("Running build steps...")
+    print("=" * 50)
+
+    # Run libcore manifest generator
+    lib_dir = os.path.join(repo_path, "libcore")
+    lib_manifest_script = os.path.join(lib_dir, "generate_manifest.py")
+    if os.path.exists(lib_manifest_script):
+        print("\n[1/7] Generating libcore manifest...")
+        result = subprocess.run(
+            [sys.executable, "generate_manifest.py"],
+            cwd=lib_dir,
+            capture_output=True,
+            text=True
+        )
+        if result.returncode != 0:
+            print(f"Error running libcore manifest generator:")
+            print(result.stderr)
+            sys.exit(1)
+        print(result.stdout.strip())
+    else:
+        print(f"Warning: libcore manifest script not found: {lib_manifest_script}")
+
+    # Run libtools manifest generator
+    libtools_dir = os.path.join(repo_path, "libtools")
+    libtools_manifest_script = os.path.join(libtools_dir, "generate_manifest.py")
+    if os.path.exists(libtools_manifest_script):
+        print("\n[2/7] Generating libtools manifest...")
+        result = subprocess.run(
+            [sys.executable, "generate_manifest.py"],
+            cwd=libtools_dir,
+            capture_output=True,
+            text=True
+        )
+        if result.returncode != 0:
+            print(f"Error running libtools manifest generator:")
+            print(result.stderr)
+            sys.exit(1)
+        print(result.stdout.strip())
+    else:
+        print(f"Warning: libtools manifest script not found: {libtools_manifest_script}")
+
+    # Run libextra manifest generator
+    libextra_dir = os.path.join(repo_path, "libextra")
+    libextra_manifest_script = os.path.join(libextra_dir, "generate_manifest.py")
+    if os.path.exists(libextra_manifest_script):
+        print("\n[3/7] Generating libextra manifest...")
+        result = subprocess.run(
+            [sys.executable, "generate_manifest.py"],
+            cwd=libextra_dir,
+            capture_output=True,
+            text=True
+        )
+        if result.returncode != 0:
+            print(f"Error running libextra manifest generator:")
+            print(result.stderr)
+            sys.exit(1)
+        print(result.stdout.strip())
+    else:
+        print(f"Warning: libextra manifest script not found: {libextra_manifest_script}")
+
+    # Run local subdirectory manifest generators
+    local_subdirs = ["pages", "music", "lib"]
+    step = 4
+    for subdir in local_subdirs:
+        local_subdir = os.path.join(repo_path, "local", subdir)
+        manifest_script = os.path.join(local_subdir, "generate_manifest.py")
+        if os.path.exists(manifest_script):
+            print(f"\n[{step}/7] Generating local/{subdir} manifest...")
+            result = subprocess.run(
+                [sys.executable, "generate_manifest.py"],
+                cwd=local_subdir,
+                capture_output=True,
+                text=True
+            )
+            if result.returncode != 0:
+                print(f"Error running local/{subdir} manifest generator:")
+                print(result.stderr)
+                sys.exit(1)
+            print(result.stdout.strip())
+        step += 1
+
+    # Run WASM build
+    build_script = os.path.join(repo_path, "build_wasm.py")
+    if os.path.exists(build_script):
+        print("\n[7/7] Building WASM...")
+        result = subprocess.run(
+            [sys.executable, "build_wasm.py"],
+            cwd=repo_path,
+            capture_output=True,
+            text=True
+        )
+        if result.returncode != 0:
+            print(f"Error running WASM build:")
+            print(result.stderr)
+            sys.exit(1)
+        print(result.stdout)
+        print("WASM build completed.")
+    else:
+        print(f"Error: build script not found: {build_script}")
+        sys.exit(1)
+
+    print("\n" + "=" * 50)
+    print("Build steps completed successfully!")
+    print("=" * 50 + "\n")
+
+
+def create_dist(repo_path, zip_path):
+    """Create a distribution zip file with only runtime-required files."""
+
+    # Validate repo path
+    if not os.path.isdir(repo_path):
+        print(f"Error: Repository path does not exist: {repo_path}")
+        sys.exit(1)
+
+    # Run build steps first
+    run_build_steps(repo_path)
+
+    # Verify required files exist after build
+    required_checks = [
+        os.path.join(repo_path, "keykit.html"),
+        os.path.join(repo_path, "keykit.js"),
+        os.path.join(repo_path, "keykit.wasm"),
+        os.path.join(repo_path, "libcore", "libcore_manifest.json"),
+    ]
+
+    missing = [f for f in required_checks if not os.path.exists(f)]
+    if missing:
+        print("Error: Build completed but required files are missing:")
+        for f in missing:
+            print(f"  Missing: {f}")
+        sys.exit(1)
+
+    # Ensure zip_path ends with .zip
+    if not zip_path.endswith('.zip'):
+        zip_path += '.zip'
+
+    # Get the subdirectory name from the zip filename (without .zip extension)
+    zip_basename = os.path.basename(zip_path)
+    subdir = zip_basename[:-4]  # Remove .zip extension
+
+    # Remove existing zip file if present
+    if os.path.exists(zip_path):
+        print(f"Warning: Zip file exists, removing: {zip_path}")
+        os.remove(zip_path)
+
+    print(f"Creating distribution zip: {zip_path}")
+    print(f"Files will be in subdirectory: {subdir}/")
+
+    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+        # Files from main repo directory (the built WASM application)
+        app_files = [
+            "keykit.html",
+            "keykit.js",
+            "keykit.wasm",
+            "keykit.ico",
+        ]
+
+        for filename in app_files:
+            src_file = os.path.join(repo_path, filename)
+            if os.path.exists(src_file):
+                zf.write(src_file, f"{subdir}/{filename}")
+                print(f"Added: {subdir}/{filename}")
+            else:
+                print(f"Warning: File not found: {src_file}")
+
+        # Add libcore/ directory (KeyKit library files)
+        lib_src = os.path.join(repo_path, "libcore")
+
+        if os.path.isdir(lib_src):
+            # Read manifest to get only needed files
+            manifest_path = os.path.join(lib_src, "libcore_manifest.json")
+            with open(manifest_path, 'r') as f:
+                manifest_files = json.load(f)
+
+            # Add manifest
+            zf.write(manifest_path, f"{subdir}/libcore/libcore_manifest.json")
+            print(f"Added: {subdir}/libcore/libcore_manifest.json")
+
+            # Add all files listed in manifest
+            added_count = 0
+            for filename in manifest_files:
+                src_file = os.path.join(lib_src, filename)
+                if os.path.exists(src_file):
+                    zf.write(src_file, f"{subdir}/libcore/{filename}")
+                    added_count += 1
+                else:
+                    print(f"Warning: Manifest file not found: {src_file}")
+
+            print(f"Added: {added_count} library files to {subdir}/libcore/")
+        else:
+            print(f"Warning: libcore directory not found: {lib_src}")
+
+        # Add libtools/ directory (KeyKit user tools)
+        libtools_src = os.path.join(repo_path, "libtools")
+        if os.path.isdir(libtools_src):
+            manifest_path = os.path.join(libtools_src, "libtools_manifest.json")
+            if os.path.exists(manifest_path):
+                with open(manifest_path, 'r') as f:
+                    manifest_files = json.load(f)
+
+                # Add manifest
+                zf.write(manifest_path, f"{subdir}/libtools/libtools_manifest.json")
+                print(f"Added: {subdir}/libtools/libtools_manifest.json")
+
+                # Add all files listed in manifest
+                libtools_count = 0
+                for filename in manifest_files:
+                    src_file = os.path.join(libtools_src, filename)
+                    if os.path.exists(src_file):
+                        zf.write(src_file, f"{subdir}/libtools/{filename}")
+                        libtools_count += 1
+                    else:
+                        print(f"Warning: Manifest file not found: {src_file}")
+                print(f"Added: {libtools_count} library files to {subdir}/libtools/")
+            else:
+                print(f"Warning: libtools manifest not found: {manifest_path}")
+        else:
+            # Create empty libtools directory
+            zf.writestr(f"{subdir}/libtools/.gitkeep", "")
+            print(f"Added: empty {subdir}/libtools/ directory")
+
+        # Add libextra/ directory (KeyKit extra/experimental files)
+        libextra_src = os.path.join(repo_path, "libextra")
+        if os.path.isdir(libextra_src):
+            manifest_path = os.path.join(libextra_src, "libextra_manifest.json")
+            if os.path.exists(manifest_path):
+                with open(manifest_path, 'r') as f:
+                    manifest_files = json.load(f)
+
+                # Add manifest
+                zf.write(manifest_path, f"{subdir}/libextra/libextra_manifest.json")
+                print(f"Added: {subdir}/libextra/libextra_manifest.json")
+
+                # Add all files listed in manifest
+                libextra_count = 0
+                for filename in manifest_files:
+                    src_file = os.path.join(libextra_src, filename)
+                    if os.path.exists(src_file):
+                        zf.write(src_file, f"{subdir}/libextra/{filename}")
+                        libextra_count += 1
+                    else:
+                        print(f"Warning: Manifest file not found: {src_file}")
+                print(f"Added: {libextra_count} library files to {subdir}/libextra/")
+            else:
+                print(f"Warning: libextra manifest not found: {manifest_path}")
+        else:
+            # Create empty libextra directory
+            zf.writestr(f"{subdir}/libextra/.gitkeep", "")
+            print(f"Added: empty {subdir}/libextra/ directory")
+
+        # Add music/ directory (sample MIDI files)
+        music_src = os.path.join(repo_path, "music")
+
+        if os.path.isdir(music_src):
+            music_count = 0
+            mid_files = []
+            for filename in os.listdir(music_src):
+                if filename.endswith('.mid'):
+                    src_file = os.path.join(music_src, filename)
+                    zf.write(src_file, f"{subdir}/music/{filename}")
+                    mid_files.append(filename)
+                    music_count += 1
+
+            # Create and add manifest for music directory
+            music_manifest = json.dumps(sorted(mid_files), indent=2)
+            zf.writestr(f"{subdir}/music/music_manifest.json", music_manifest)
+            print(f"Added: {music_count} MIDI files to {subdir}/music/")
+            print(f"Added: {subdir}/music/music_manifest.json")
+
+        # Add local/ directory structure (for user files)
+        local_src = os.path.join(repo_path, "local")
+
+        if os.path.isdir(local_src):
+            local_file_count = 0
+            for root, dirs, files in os.walk(local_src):
+                for filename in files:
+                    # Skip backup files, vim undo files, etc.
+                    if filename.endswith('~') or filename.startswith('.'):
+                        continue
+                    # Skip generate_manifest.py scripts
+                    if filename == 'generate_manifest.py':
+                        continue
+                    src_file = os.path.join(root, filename)
+                    rel_path = os.path.relpath(src_file, repo_path)
+                    zf.write(src_file, f"{subdir}/{rel_path}")
+                    local_file_count += 1
+            print(f"Added: {local_file_count} files to {subdir}/local/")
+        else:
+            # Create empty local directory structure with placeholder files
+            # (zip files can't store empty directories, so we add .gitkeep files)
+            zf.writestr(f"{subdir}/local/music/.gitkeep", "")
+            zf.writestr(f"{subdir}/local/pages/.gitkeep", "")
+            zf.writestr(f"{subdir}/local/lib/.gitkeep", "")
+            print(f"Added: empty {subdir}/local/ directory structure")
+
+        # Add doc/ directory (HTML documentation)
+        doc_src = os.path.join(repo_path, "doc")
+
+        if os.path.isdir(doc_src):
+            doc_count = 0
+            for filename in os.listdir(doc_src):
+                if filename.endswith('.html'):
+                    src_file = os.path.join(doc_src, filename)
+                    zf.write(src_file, f"{subdir}/doc/{filename}")
+                    doc_count += 1
+            print(f"Added: {doc_count} HTML files to {subdir}/doc/")
+        else:
+            print(f"Warning: doc directory not found: {doc_src}")
+
+        # Add serve.py for convenience
+        serve_src = os.path.join(repo_path, "serve.py")
+        if os.path.exists(serve_src):
+            zf.write(serve_src, f"{subdir}/serve.py")
+            print(f"Added: {subdir}/serve.py")
+
+    # Get file size
+    zip_size = os.path.getsize(zip_path)
+    zip_size_mb = zip_size / (1024 * 1024)
+
+    # Summary
+    print("\n" + "=" * 50)
+    print("Distribution zip created successfully!")
+    print("=" * 50)
+    print(f"\nOutput file: {zip_path}")
+    print(f"Size: {zip_size_mb:.2f} MB")
+    print(f"Contents in: {subdir}/")
+    print("\nTo use:")
+    print("  1. Extract the zip file")
+    print(f"  2. python {subdir}/serve.py")
+    print(f"  3. Open http://localhost:8000/{subdir}/keykit.html")
+
+
+def main():
+    if len(sys.argv) != 2:
+        print(__doc__)
+        sys.exit(1)
+
+    # Use current directory as repo path
+    repo_path = os.getcwd()
+
+    # Put output in dist/ directory
+    dist_dir = os.path.join(repo_path, "dist")
+    os.makedirs(dist_dir, exist_ok=True)
+
+    zip_path = os.path.join(dist_dir, sys.argv[1])
+
+    # Verify we're in the right directory
+    if not os.path.exists(os.path.join(repo_path, "build_wasm.py")):
+        print("Error: This script must be run from the keykitcanvas repository directory.")
+        print(f"Current directory: {repo_path}")
+        print("Expected to find: build_wasm.py")
+        sys.exit(1)
+
+    create_dist(repo_path, zip_path)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="keykit.ico">
+    <title>KeyKit - WebAssembly Music Programming</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #f0f0f0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #4CAF50;
+            margin: 0 0 10px 0;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .subtitle {
+            color: #888;
+            margin: 0 0 20px 0;
+            font-size: 1.2em;
+        }
+
+        h3 {
+            color: #4CAF50;
+            margin: 20px 0 10px 0;
+            font-size: 1.5em;
+        }
+
+        .info-box {
+            display: none;
+        }
+
+        #container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 1024px;
+            margin: 0 auto;
+            padding-bottom: 40px;
+        }
+
+        #canvas-container {
+            position: relative;
+            width: 1024px;
+            min-width: 1024px;
+            max-width: 1024px;
+            height: 768px;
+            min-height: 768px;
+            max-height: 768px;
+            margin: 20px 0;
+            border: 3px solid #4CAF50;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(76, 175, 80, 0.3);
+            background: #000;
+            flex-shrink: 0;
+        }
+
+        #keykit-canvas {
+            display: block;
+            width: 1024px;
+            height: 768px;
+            /* No border-radius on canvas to avoid coordinate issues */
+            /* Use auto for smooth text rendering instead of pixelated */
+            image-rendering: auto;
+            /* Enable font smoothing for better text quality */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        #output {
+            width: 100%;
+            height: 200px;
+            background: #0a0a0a;
+            border: 2px solid #333;
+            border-radius: 5px;
+            padding: 10px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            color: #0f0;
+            overflow-y: auto;
+            margin-top: 20px;
+            box-sizing: border-box;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+
+        #status {
+            text-align: center;
+            padding: 10px;
+            margin: 10px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+            border: 1px solid #333;
+        }
+
+        .progress {
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+            max-width: 500px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .info-box {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid #444;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            max-width: 1024px;
+            width: 100%;
+        }
+
+        .info-box h3 {
+            margin-top: 0;
+            color: #4CAF50;
+        }
+
+        .info-box ul {
+            margin: 5px 0;
+            padding-left: 20px;
+        }
+
+        .info-box li {
+            margin: 5px 0;
+        }
+
+        a {
+            color: #4CAF50;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* Emscripten default styling overrides */
+        .emscripten {
+            padding: 0;
+            margin: 0;
+        }
+
+        #emscripten_logo {
+            display: none;
+        }
+
+        textarea.emscripten {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        }
+    </style>
+
+    <!-- NATS.ws library for messaging (ES Module) -->
+    <script type="module">
+        import { connect, StringCodec } from 'https://cdn.jsdelivr.net/npm/nats.ws@1.30.3/esm/nats.js';
+        window.nats = { connect, StringCodec };
+        console.log('[NATS] Library loaded and exposed as window.nats');
+    </script>
+</head>
+<body>
+    <div id="container">
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 10px;">
+            <h1 style="margin: 0; display: flex; align-items: center; gap: 10px;"><img src="keykit.ico" alt="" style="width: 40px; height: 40px;"> KeyKit</h1>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="color: #888; margin-right: 5px;">Size:</span>
+                <select id="canvas-size-select" onchange="var s = this.value.split('x'); setCanvasSize(parseInt(s[0]), parseInt(s[1]));" style="padding: 5px 10px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    <option value="640x480">640x480</option>
+                    <option value="800x600">800x600</option>
+                    <option value="1024x768" selected>1024x768</option>
+                    <option value="1200x800">1200x800</option>
+                    <option value="1920x1080">1920x1080</option>
+                </select>
+                <span style="margin: 0 10px; color: #444;">|</span>
+                <button id="connect-local-btn" onclick="if(window.requestLocalDirAccess) requestLocalDirAccess().then(ok => { if(ok && window.updateSyncStatus) updateSyncStatus(); }); else alert('Please wait for KeyKit to finish loading');" style="padding: 5px 15px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    Connect Local Folder
+                </button>
+                <span id="sync-status-text" style="color: #888;">Loading...</span>
+                <span style="margin: 0 10px; color: #444;">|</span>
+                <button onclick="showHelp();" style="padding: 5px 15px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    Help
+                </button>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <h3>Getting Started</h3>
+            <ul>
+                <li><strong>Graphics:</strong> KeyKit graphics are rendered on the canvas below</li>
+                <li><strong>MIDI:</strong> Connect MIDI devices and grant permissions to use real MIDI I/O</li>
+                <li><strong>Mouse:</strong> Click and drag on the canvas for interactive graphics</li>
+                <li><strong>Keyboard:</strong> Type on your keyboard for KeyKit input</li>
+            </ul>
+        </div>
+
+        <div id="status">
+            <div>Status: <span id="status-text">Loading...</span></div>
+            <div class="progress">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+        </div>
+
+        <div id="canvas-container">
+            <canvas id="keykit-canvas" width="1024" height="768" tabindex="0"></canvas>
+        </div>
+
+        <div class="info-box">
+            <h3>About KeyKit</h3>
+            <p>
+                KeyKit is a music programming language and MIDI toolkit. This WebAssembly port
+                brings KeyKit's powerful music programming capabilities to the browser, with
+                full support for Canvas graphics, Web MIDI API, and interactive input.
+            </p>
+            <p>
+                Learn more: <a href="https://github.com/vizicist/keykitcanvas" target="_blank">GitHub Repository</a>
+            </p>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        // Show help in a popup window
+        function showHelp() {
+            var helpContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KeyKit Help</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: #f0f0f0;
+            padding: 20px;
+            margin: 0;
+            line-height: 1.6;
+        }
+        h1 { color: #4CAF50; margin-top: 0; }
+        h2 { color: #4CAF50; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        h3 { color: #8BC34A; }
+        code {
+            background: #333;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Consolas', monospace;
+        }
+        pre {
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 5px;
+            padding: 10px;
+            overflow-x: auto;
+        }
+        ul { padding-left: 20px; }
+        li { margin: 5px 0; }
+        a { color: #4CAF50; }
+        .section { margin-bottom: 25px; }
+    </style>
+</head>
+<body>
+    <h1>KeyKit Help</h1>
+
+    <div class="section">
+        <h2>Getting Started</h2>
+        <p>KeyKit is a programming language and GUI system for algorithmic and realtime MIDI experimentation. Use the canvas to interact with the GUI, and type commands in the console area.</p>
+    </div>
+
+    <div class="section">
+        <h2>Local Folder Sync</h2>
+        <p>Click <strong>Connect Local Folder</strong> to link a folder (which should exist and be empty initially) on your computer.
+            It will show up as <code>/keykit/local</code> in KeyKit.
+            This allows you to:</p>
+        <ul>
+            <li>Read and write <code>music/.mid</code> MIDI files.</li>
+            <li>Edit <code>lib/*.k</code> files in your favorite editor.
+            <li>After changes, use "Misc->Reread Library" or execute <code>forcerereadlib()</code>.</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Mouse Controls</h2>
+        <ul>
+            <li><strong>Left click:</strong> used for almost everything</li>
+            <li><strong>Right click:</strong> rarely used, mostly in the Group tool</li>
+        </ul>
+        When sweeping out a tool's area, a click (i.e. no sweep) will fill the available area.
+    </div>
+
+    <div class="section">
+        <h2>MIDI Setup</h2>
+        <p>KeyKit automatically detects WebMIDI devices, and attempts to assign
+            the default input and output ports depending on your
+            MIDI routing utility (loopBe, loopMIDI, IAC on macOS, Springbeats).</p>
+        <p>In the GUI, use Tools1->Port Enabler and Tools1>PortMap to control the ports being used.
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Documentation</h2>
+        <ul>
+            <li><a href="doc/tutorial.html" target="_blank">Tutorial</a> - Getting started with KeyKit</li>
+            <li><a href="doc/language.html" target="_blank">Language Reference</a> - KeyKit language syntax and features</li>
+            <li><a href="doc/libdoc.html" target="_blank">Library Documentation</a> - Built-in functions and library reference</li>
+            <li><a href="doc/keyvar.html" target="_blank">Key Variables</a> - Important global variables</li>
+            <li><a href="doc/hacking.html" target="_blank">Hacking Guide</a> - Extending and customizing KeyKit</li>
+            <li><a href="doc/faq.html" target="_blank">FAQ</a> - Frequently Asked Questions</li>
+        </ul>
+        <p>For the source code and more, visit the <a href="https://github.com/vizicist/keykitcanvas" target="_blank">KeyKit GitHub repository</a>.</p>
+    </div>
+</body>
+</html>
+`;
+            var helpWindow = window.open('', 'KeyKitHelp', 'width=700,height=600,scrollbars=yes,resizable=yes');
+            helpWindow.document.write(helpContent);
+            helpWindow.document.close();
+        }
+
+        // Flag to track if WASM runtime is fully initialized
+        var wasmRuntimeReady = false;
+
+        // Function to initialize MIDI before main()
+        function initMIDI() {
+            console.log('[' + new Date().toISOString() + '] Initializing MIDI access...');
+
+            // Tell Emscripten to wait for MIDI initialization
+            Module.addRunDependency('midi_init');
+
+            // Set a timeout to prevent hanging forever (5 seconds)
+            var midiInitialized = false;
+            var midiTimeout = setTimeout(function() {
+                if (!midiInitialized) {
+                    console.warn('[' + new Date().toISOString() + '] MIDI initialization timed out after 5 seconds');
+                    window.midiInputs = [];
+                    window.midiOutputs = [];
+                    midiInitialized = true;
+                    Module.removeRunDependency('midi_init');
+                }
+            }, 5000);
+
+            if (navigator.requestMIDIAccess) {
+                navigator.requestMIDIAccess({ sysex: false })
+                    .then(function(access) {
+                        if (midiInitialized) return; // Already timed out
+                        clearTimeout(midiTimeout);
+                        midiInitialized = true;
+
+                        console.log('[' + new Date().toISOString() + '] MIDI access granted!');
+                        window.midiAccess = access;
+
+                        // Store inputs and outputs as arrays
+                        window.midiInputs = Array.from(access.inputs.values());
+                        window.midiOutputs = Array.from(access.outputs.values());
+
+                        console.log('Found ' + window.midiInputs.length + ' MIDI inputs');
+                        console.log('Found ' + window.midiOutputs.length + ' MIDI outputs');
+
+                        // Log device names
+                        window.midiInputs.forEach(function(input, index) {
+                            console.log('  Input ' + index + ': ' + input.name);
+                        });
+                        window.midiOutputs.forEach(function(output, index) {
+                            console.log('  Output ' + index + ': ' + output.name);
+                        });
+
+                        // Allow main() to proceed now that MIDI is ready
+                        Module.removeRunDependency('midi_init');
+                    })
+                    .catch(function(err) {
+                        if (midiInitialized) return; // Already timed out
+                        clearTimeout(midiTimeout);
+                        midiInitialized = true;
+
+                        console.error('[' + new Date().toISOString() + '] MIDI access denied or error:', err);
+                        window.midiInputs = [];
+                        window.midiOutputs = [];
+                        // Remove dependency even on error so main() can proceed
+                        Module.removeRunDependency('midi_init');
+                    });
+            } else {
+                clearTimeout(midiTimeout);
+                midiInitialized = true;
+                console.warn('[' + new Date().toISOString() + '] Web MIDI API not supported in this browser');
+                window.midiInputs = [];
+                window.midiOutputs = [];
+                // Remove dependency so main() can proceed without MIDI
+                Module.removeRunDependency('midi_init');
+            }
+        }
+
+        // Function to load KeyKit library files into virtual filesystem
+        // Uses addRunDependency to block main() until files are loaded
+        function loadLibraryFiles() {
+            console.log('[' + new Date().toISOString() + '] Loading KeyKit library files...');
+
+            // Tell Emscripten to wait for our async operation
+            Module.addRunDependency('loadLibraryFiles');
+
+            // Set a timeout to prevent hanging forever (30 seconds for file loading)
+            var filesLoaded = false;
+            var loadTimeout = setTimeout(function() {
+                if (!filesLoaded) {
+                    console.error('[' + new Date().toISOString() + '] Library file loading timed out after 30 seconds');
+                    filesLoaded = true;
+                    Module.removeRunDependency('loadLibraryFiles');
+                }
+            }, 30000);
+
+            // Start async loading
+            (async function() {
+                try {
+                    // ====================================================================
+                    // LIBRARY CONFIGURATION - Single source of truth for all lib directories
+                    //
+                    // Default configuration (can be overridden via URL parameter):
+                    //   - Add/remove library directories
+                    //   - Enable/disable loading of specific libraries
+                    //   - Change the order of directories in Keypath
+                    //
+                    // URL Parameter Override:
+                    //   Use ?keypath=/keykit/libcore;/keykit/libtools;/keykit/libextra;/keykit/local/lib
+                    //   to control which libraries are enabled and their order
+                    //
+                    // The configuration automatically controls:
+                    //   - Virtual filesystem directory creation
+                    //   - File loading from manifests
+                    //   - Keypath construction (exposed to C via Module.keypath)
+                    // ====================================================================
+
+                    // Default library configuration
+                    const libraryConfig = [
+                        {
+                            name: 'libcore',
+                            path: '/keykit/libcore',
+                            manifest: 'libcore/libcore_manifest.json',
+                            enabled: true,
+                            batchSize: 5,
+                            description: 'Core library functions'
+                        },
+                        {
+                            name: 'libtools',
+                            path: '/keykit/libtools',
+                            manifest: 'libtools/libtools_manifest.json',
+                            enabled: true,
+                            batchSize: 10,
+                            description: 'User tools and utilities'
+                        },
+                        {
+                            name: 'libextra',
+                            path: '/keykit/libextra',
+                            manifest: 'libextra/libextra_manifest.json',
+                            enabled: true,
+                            batchSize: 10,
+                            description: 'Extra/experimental libraries'
+                        }
+                    ];
+
+                    // Check for URL parameter override
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const keypathParam = urlParams.get('keypath');
+
+                    let keypath;
+                    if (keypathParam) {
+                        // URL parameter provided - use it to determine enabled libraries
+                        keypath = keypathParam;
+                        const urlPaths = keypathParam.split(';').map(p => p.trim());
+
+                        // Disable all libraries by default
+                        libraryConfig.forEach(lib => lib.enabled = false);
+
+                        // Enable only libraries that are in the URL keypath
+                        urlPaths.forEach(urlPath => {
+                            const lib = libraryConfig.find(l => l.path === urlPath);
+                            if (lib) {
+                                lib.enabled = true;
+                            }
+                        });
+
+                        console.log(`Using keypath from URL parameter: ${keypath}`);
+                    } else {
+                        // No URL parameter - build from enabled libraries in config
+                        const enabledPaths = libraryConfig
+                            .filter(lib => lib.enabled)
+                            .map(lib => lib.path);
+                        // Always append /keykit/local/lib at the end
+                        enabledPaths.push('/keykit/local/lib');
+                        keypath = enabledPaths.join(';');
+
+                        console.log(`Using default keypath from configuration`);
+                    }
+
+                    // Store keypath for C code to retrieve via mdep_keypath()
+                    Module.keypath = keypath;
+
+                    console.log('='.repeat(70));
+                    console.log('KEYKIT LIBRARY CONFIGURATION');
+                    console.log('='.repeat(70));
+                    libraryConfig.forEach(lib => {
+                        const status = lib.enabled ? '✓ ENABLED ' : '✗ DISABLED';
+                        console.log(`  ${status} ${lib.name.padEnd(12)} - ${lib.description}`);
+                    });
+                    console.log('-'.repeat(70));
+                    console.log(`Keypath: ${keypath}`);
+                    console.log('='.repeat(70));
+
+                    // Wait for FS to be ready
+                    var maxWait = 50; // 5 seconds max
+                    while (!Module.FS && maxWait-- > 0) {
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+
+                    if (!Module.FS) {
+                        throw new Error('FS not ready after 5 seconds');
+                    }
+
+                    console.log('[' + new Date().toISOString() + '] FS ready, creating directories...');
+
+                    // Create the /keykit root directory
+                    try {
+                        Module.FS.mkdir('/keykit');
+                    } catch (err) { /* may exist */ }
+
+                    // Create directories for enabled libraries
+                    for (const lib of libraryConfig) {
+                        if (lib.enabled) {
+                            try {
+                                Module.FS.mkdir(lib.path);
+                                console.log(`Created ${lib.path}`);
+                            } catch (err) { /* may exist */ }
+                        }
+                    }
+
+                    // Load all enabled libraries using the configuration
+                    for (const lib of libraryConfig) {
+                        if (!lib.enabled) {
+                            console.log(`Skipping ${lib.name} (disabled in configuration)`);
+                            continue;
+                        }
+
+                        console.log(`Loading ${lib.name} from ${lib.manifest}...`);
+                        let loadedCount = 0;
+
+                        try {
+                            const manifestResponse = await fetch(lib.manifest);
+                            if (!manifestResponse.ok) {
+                                console.warn(`  ${lib.name} manifest not found, skipping`);
+                                continue;
+                            }
+
+                            const files = await manifestResponse.json();
+                            console.log(`  Found ${files.length} files in ${lib.name} manifest`);
+
+                            // Load files in batches
+                            for (let i = 0; i < files.length; i += lib.batchSize) {
+                                const batch = files.slice(i, i + lib.batchSize);
+
+                                await Promise.all(batch.map(async (filename) => {
+                                    try {
+                                        const fileResponse = await fetch(`${lib.name}/${filename}`);
+                                        if (!fileResponse.ok) {
+                                            throw new Error(`HTTP ${fileResponse.status}`);
+                                        }
+                                        const content = await fileResponse.arrayBuffer();
+                                        const uint8Array = new Uint8Array(content);
+
+                                        Module.FS.writeFile(`${lib.path}/${filename}`, uint8Array);
+                                        loadedCount++;
+                                    } catch (err) {
+                                        console.warn(`  Failed to load ${lib.name}/${filename}:`, err);
+                                    }
+                                }));
+
+                                // Update progress for larger libraries
+                                if (files.length > 50 && (loadedCount % 50 === 0 || i + lib.batchSize >= files.length)) {
+                                    console.log(`  Loaded ${loadedCount}/${files.length} files...`);
+                                    Module.setStatus(`Loading ${lib.name} (${loadedCount}/${files.length})...`);
+                                }
+                            }
+
+                            console.log(`  ✓ Successfully loaded ${loadedCount} files into ${lib.path}/`);
+
+                        } catch (err) {
+                            console.warn(`  ✗ Error loading ${lib.name}:`, err);
+                        }
+                    }
+
+                    // Create /keykit/local directory and mount IDBFS for persistent storage
+                    try {
+                        Module.FS.mkdir('/keykit/local');
+                    } catch (err) { /* may exist */ }
+
+                    // Mount IDBFS for persistent storage
+                    try {
+                        Module.FS.mount(Module.IDBFS, {}, '/keykit/local');
+                        console.log('Mounted IDBFS on /keykit/local');
+
+                        // Load any previously saved data from IndexedDB (with timeout)
+                        await new Promise((resolve) => {
+                            const timeout = setTimeout(() => {
+                                console.warn('IDBFS sync timed out, continuing without IndexedDB data');
+                                resolve();
+                            }, 5000);
+
+                            Module.FS.syncfs(true, function(err) {
+                                clearTimeout(timeout);
+                                if (err) {
+                                    console.error('Error loading from IndexedDB:', err);
+                                } else {
+                                    console.log('Loaded local files from IndexedDB');
+                                }
+                                resolve();
+                            });
+                        });
+                    } catch (mountErr) {
+                        console.error('Failed to mount IDBFS:', mountErr);
+                    }
+
+                    // Create local subdirectories if they don't exist
+                    try {
+                        Module.FS.mkdir('/keykit/local/pages');
+                    } catch (err) { /* may exist */ }
+                    try {
+                        Module.FS.mkdir('/keykit/local/music');
+                    } catch (err) { /* may exist */ }
+                    try {
+                        Module.FS.mkdir('/keykit/local/lib');
+                    } catch (err) { /* may exist */ }
+                    console.log('Created /keykit/local subdirectories');
+
+                    // Helper to load files from a manifest into virtual filesystem
+                    async function loadLocalDir(subdir, manifestName) {
+                        try {
+                            const response = await fetch(`local/${subdir}/${manifestName}`);
+                            const files = await response.json();
+                            console.log(`Found ${files.length} files in local/${subdir}/ manifest`);
+
+                            // Get existing files from IndexedDB
+                            let existingFiles = [];
+                            try {
+                                existingFiles = Module.FS.readdir(`/keykit/local/${subdir}`);
+                            } catch (err) { /* directory might be empty */ }
+
+                            for (const filename of files) {
+                                // Skip if file already exists (IndexedDB wins)
+                                if (existingFiles.includes(filename)) {
+                                    console.log(`Skipping ${filename} (already in IndexedDB)`);
+                                    continue;
+                                }
+                                try {
+                                    const fileResponse = await fetch(`local/${subdir}/${filename}`);
+                                    const content = await fileResponse.arrayBuffer();
+                                    const uint8Array = new Uint8Array(content);
+                                    Module.FS.writeFile(`/keykit/local/${subdir}/${filename}`, uint8Array);
+                                } catch (err) {
+                                    console.warn(`Failed to load local/${subdir}/${filename}:`, err);
+                                }
+                            }
+                            console.log(`Loaded files into /keykit/local/${subdir}/`);
+                        } catch (err) {
+                            console.log(`No manifest found in local/${subdir}/`);
+                        }
+                    }
+
+                    // Load bundled local files from manifests
+                    await loadLocalDir('pages', 'pages_manifest.json');
+                    await loadLocalDir('music', 'music_manifest.json');
+                    await loadLocalDir('lib', 'lib_manifest.json');
+
+                    // Set up File System Access API for real filesystem sync
+                    window.keykitLocalDirHandle = null;
+
+                    // Request access to local directory (call this once via UI)
+                    window.requestLocalDirAccess = async function() {
+                        try {
+                            window.keykitLocalDirHandle = await window.showDirectoryPicker({
+                                id: 'keykit-local',
+                                mode: 'readwrite',
+                                startIn: 'documents'
+                            });
+                            console.log('Got access to directory:', window.keykitLocalDirHandle.name);
+
+                            // Store the handle in IndexedDB for persistence
+                            try {
+                                const db = await new Promise((resolve, reject) => {
+                                    const request = indexedDB.open('keykit-handles', 1);
+                                    request.onerror = () => reject(request.error);
+                                    request.onsuccess = () => resolve(request.result);
+                                    request.onupgradeneeded = (e) => {
+                                        e.target.result.createObjectStore('handles');
+                                    };
+                                });
+                                const tx = db.transaction('handles', 'readwrite');
+                                tx.objectStore('handles').put(window.keykitLocalDirHandle, 'localDir');
+                                await new Promise((resolve, reject) => {
+                                    tx.oncomplete = resolve;
+                                    tx.onerror = () => reject(tx.error);
+                                });
+                                db.close();
+                            } catch (dbErr) {
+                                console.warn('Could not save directory handle to IndexedDB:', dbErr);
+                            }
+
+                            // Sync VFS to real filesystem, but don't overwrite existing real files
+                            console.log('Syncing local files to real filesystem (skip existing)...');
+                            await window.syncAllLocalToReal(true);
+
+                            return true;
+                        } catch (err) {
+                            // User cancelled the dialog - not an error
+                            if (err.name === 'AbortError') {
+                                console.log('Directory selection cancelled');
+                                return false;
+                            }
+                            console.error('Failed to get directory access:', err);
+                            return false;
+                        }
+                    };
+
+                    // Try to restore saved directory handle
+                    window.restoreLocalDirAccess = async function() {
+                        try {
+                            const db = await new Promise((resolve, reject) => {
+                                const request = indexedDB.open('keykit-handles', 1);
+                                request.onerror = () => reject(request.error);
+                                request.onsuccess = () => resolve(request.result);
+                                request.onupgradeneeded = (e) => {
+                                    e.target.result.createObjectStore('handles');
+                                };
+                            });
+                            const tx = db.transaction('handles', 'readonly');
+                            const handle = await new Promise((resolve, reject) => {
+                                const request = tx.objectStore('handles').get('localDir');
+                                request.onerror = () => reject(request.error);
+                                request.onsuccess = () => resolve(request.result);
+                            });
+                            db.close();
+
+                            if (handle) {
+                                // Verify we still have permission
+                                const permission = await handle.queryPermission({ mode: 'readwrite' });
+                                if (permission === 'granted') {
+                                    window.keykitLocalDirHandle = handle;
+                                    console.log('Restored directory access:', handle.name);
+
+                                    // Sync files from real filesystem into VFS on startup
+                                    console.log('Syncing from real filesystem on startup...');
+                                    await window.syncAllRealToLocal();
+
+                                    return true;
+                                }
+                                // Don't try to request permission here - it requires user gesture
+                                console.log('Directory handle found but permission not granted');
+                            }
+                        } catch (err) {
+                            console.log('Could not restore directory access:', err);
+                        }
+                        return false;
+                    };
+
+                    // Sync a file to the real filesystem
+                    // If skipExisting is true, don't overwrite files that already exist in real filesystem
+                    window.syncFileToReal = async function(virtualPath, skipExisting) {
+                        if (!window.keykitLocalDirHandle) {
+                            console.log('No directory handle - call requestLocalDirAccess() first');
+                            return false;
+                        }
+
+                        try {
+                            // Get relative path from /keykit/local/
+                            const relativePath = virtualPath.replace('/keykit/local/', '');
+                            const parts = relativePath.split('/');
+                            const filename = parts.pop();
+
+                            // Navigate/create subdirectories
+                            let dirHandle = window.keykitLocalDirHandle;
+                            for (const part of parts) {
+                                dirHandle = await dirHandle.getDirectoryHandle(part, { create: true });
+                            }
+
+                            // Check if file already exists in real filesystem
+                            if (skipExisting) {
+                                try {
+                                    await dirHandle.getFileHandle(filename, { create: false });
+                                    // File exists, skip it
+                                    console.log('Skipping existing real file:', relativePath);
+                                    return true;
+                                } catch (notFoundErr) {
+                                    // File doesn't exist, continue to create it
+                                }
+                            }
+
+                            // Read from virtual filesystem
+                            const data = Module.FS.readFile(virtualPath);
+
+                            // Write to real filesystem
+                            const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
+                            const writable = await fileHandle.createWritable();
+                            await writable.write(data);
+                            await writable.close();
+
+                            console.log('Synced to real filesystem:', relativePath);
+                            return true;
+                        } catch (err) {
+                            console.error('Failed to sync file:', err);
+                            return false;
+                        }
+                    };
+
+                    // Sync all files in /keykit/local to real filesystem
+                    // If skipExisting is true, don't overwrite files that already exist in real filesystem
+                    window.syncAllLocalToReal = async function(skipExisting) {
+                        if (!window.keykitLocalDirHandle) {
+                            console.log('No directory handle - requesting access...');
+                            if (!await window.requestLocalDirAccess()) {
+                                return false;
+                            }
+                        }
+
+                        // Helper to sync a directory recursively
+                        async function syncDir(vfsPath, depth) {
+                            if (depth > 5) return; // prevent infinite recursion
+                            try {
+                                const entries = Module.FS.readdir(vfsPath);
+                                for (const entry of entries) {
+                                    if (entry === '.' || entry === '..') continue;
+                                    const fullPath = vfsPath + '/' + entry;
+                                    try {
+                                        const stat = Module.FS.stat(fullPath);
+                                        if (Module.FS.isDir(stat.mode)) {
+                                            // Recurse into subdirectory
+                                            await syncDir(fullPath, depth + 1);
+                                        } else {
+                                            // Sync file
+                                            await window.syncFileToReal(fullPath, skipExisting);
+                                        }
+                                    } catch (statErr) {
+                                        console.warn('Could not stat ' + fullPath + ':', statErr);
+                                    }
+                                }
+                            } catch (err) {
+                                // Directory may not exist
+                            }
+                        }
+
+                        try {
+                            await syncDir('/keykit/local', 0);
+                            return true;
+                        } catch (err) {
+                            console.error('Failed to sync local files:', err);
+                            return false;
+                        }
+                    };
+
+                    // Alias for backwards compatibility
+                    window.syncAllPagesToReal = window.syncAllLocalToReal;
+
+                    // Sync all files from real filesystem into VFS
+                    // This pulls new/updated files from the real directory into KeyKit
+                    window.syncAllRealToLocal = async function() {
+                        if (!window.keykitLocalDirHandle) {
+                            console.log('No directory handle connected');
+                            return false;
+                        }
+
+                        // Helper to ensure VFS directory exists
+                        function ensureVfsDir(path) {
+                            try {
+                                Module.FS.stat(path);
+                            } catch (e) {
+                                Module.FS.mkdir(path);
+                            }
+                        }
+
+                        // Helper to sync a real directory recursively into VFS
+                        async function syncRealDir(realDirHandle, vfsPath, depth) {
+                            if (depth > 5) return; // prevent infinite recursion
+
+                            ensureVfsDir(vfsPath);
+
+                            for await (const entry of realDirHandle.values()) {
+                                const entryVfsPath = vfsPath + '/' + entry.name;
+
+                                if (entry.kind === 'directory') {
+                                    // Recurse into subdirectory
+                                    const subDirHandle = await realDirHandle.getDirectoryHandle(entry.name);
+                                    await syncRealDir(subDirHandle, entryVfsPath, depth + 1);
+                                } else if (entry.kind === 'file') {
+                                    // Read file from real filesystem
+                                    const fileHandle = await realDirHandle.getFileHandle(entry.name);
+                                    const file = await fileHandle.getFile();
+                                    const arrayBuffer = await file.arrayBuffer();
+                                    const data = new Uint8Array(arrayBuffer);
+
+                                    // Write to VFS
+                                    Module.FS.writeFile(entryVfsPath, data);
+                                    console.log('Synced from real filesystem:', entryVfsPath);
+                                }
+                            }
+                        }
+
+                        // Wait if a sync is already in progress
+                        while (window.keykitSyncInProgress) {
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                        }
+                        window.keykitSyncInProgress = true;
+
+                        try {
+                            await syncRealDir(window.keykitLocalDirHandle, '/keykit/local', 0);
+
+                            // Sync the VFS changes to IndexedDB
+                            await new Promise((resolve) => {
+                                Module.FS.syncfs(false, function(err) {
+                                    if (err) console.error('Sync to IndexedDB error:', err);
+                                    resolve();
+                                });
+                            });
+
+                            console.log('Finished syncing real filesystem to VFS');
+                            return true;
+                        } catch (err) {
+                            console.error('Failed to sync from real filesystem:', err);
+                            return false;
+                        } finally {
+                            window.keykitSyncInProgress = false;
+                        }
+                    };
+
+                    // Set up debounced sync for file writes
+                    window.keykitSyncTimer = null;
+                    window.keykitSyncInProgress = false;
+                    window.scheduleLocalSync = function() {
+                        if (window.keykitSyncTimer) clearTimeout(window.keykitSyncTimer);
+                        window.keykitSyncTimer = setTimeout(async function() {
+                            // Skip if a sync is already in progress
+                            if (window.keykitSyncInProgress) {
+                                console.log('Sync already in progress, skipping');
+                                window.keykitSyncTimer = null;
+                                return;
+                            }
+                            window.keykitSyncInProgress = true;
+
+                            // Sync to IndexedDB
+                            await new Promise((resolve) => {
+                                Module.FS.syncfs(false, function(err) {
+                                    if (err) console.error('Sync to IndexedDB error:', err);
+                                    else console.log('Synced /keykit/local to IndexedDB');
+                                    resolve();
+                                });
+                            });
+
+                            // Also sync to real filesystem if we have access
+                            if (window.keykitLocalDirHandle) {
+                                await window.syncAllLocalToReal();
+                            }
+
+                            window.keykitSyncInProgress = false;
+                            window.keykitSyncTimer = null;
+                        }, 2000);
+                    };
+
+                    // Update sync status UI
+                    window.updateSyncStatus = function() {
+                        const btn = document.getElementById('connect-local-btn');
+                        const status = document.getElementById('sync-status-text');
+                        if (window.keykitLocalDirHandle) {
+                            btn.textContent = 'Change Local Folder';
+                            btn.style.background = '#666';
+                            status.textContent = 'Connected: ' + window.keykitLocalDirHandle.name;
+                            status.style.color = '#4CAF50';
+                        } else {
+                            btn.textContent = 'Connect Local Folder';
+                            btn.style.background = '#4CAF50';
+                            status.textContent = 'Not connected - files only saved to browser';
+                            status.style.color = '#888';
+                        }
+                    };
+
+                    // Clear all local data from IndexedDB
+                    window.clearLocalData = async function() {
+                        if (!confirm('This will delete ALL files in /keykit/local (pages, music, lib, etc.) from browser storage.\n\nThis cannot be undone. Continue?')) {
+                            return;
+                        }
+
+                        try {
+                            // Helper to recursively delete directory contents
+                            function deleteContents(path) {
+                                try {
+                                    const entries = Module.FS.readdir(path);
+                                    for (const entry of entries) {
+                                        if (entry === '.' || entry === '..') continue;
+                                        const fullPath = path + '/' + entry;
+                                        try {
+                                            const stat = Module.FS.stat(fullPath);
+                                            if (Module.FS.isDir(stat.mode)) {
+                                                deleteContents(fullPath);
+                                                Module.FS.rmdir(fullPath);
+                                            } else {
+                                                Module.FS.unlink(fullPath);
+                                            }
+                                        } catch (err) {
+                                            console.warn('Could not delete ' + fullPath + ':', err);
+                                        }
+                                    }
+                                } catch (err) {
+                                    // Directory may not exist
+                                }
+                            }
+
+                            // Delete contents of /keykit/local
+                            deleteContents('/keykit/local');
+                            console.log('Deleted all files in /keykit/local');
+
+                            // Recreate subdirectories
+                            try { Module.FS.mkdir('/keykit/local/pages'); } catch (err) {}
+                            try { Module.FS.mkdir('/keykit/local/music'); } catch (err) {}
+                            try { Module.FS.mkdir('/keykit/local/lib'); } catch (err) {}
+
+                            // Sync to IndexedDB to persist the deletion
+                            await new Promise((resolve) => {
+                                Module.FS.syncfs(false, function(err) {
+                                    if (err) console.error('Sync error:', err);
+                                    resolve();
+                                });
+                            });
+
+                            alert('Local data cleared. The page will reload to apply changes.');
+                            location.reload();
+                        } catch (err) {
+                            console.error('Failed to clear local data:', err);
+                            alert('Error clearing local data: ' + err.message);
+                        }
+                    };
+
+                    // Try to restore directory access on startup
+                    await window.restoreLocalDirAccess();
+                    window.updateSyncStatus();
+
+                    // Now load music files
+                    try {
+                        Module.FS.mkdir('/keykit/music');
+                    } catch (err) { /* may exist */ }
+                    console.log('Created /keykit/music directory');
+
+                    try {
+                        const musicResponse = await fetch('music/music_manifest.json');
+                        const musicFiles = await musicResponse.json();
+                        console.log(`Found ${musicFiles.length} music files in manifest`);
+
+                        let musicLoaded = 0;
+                        const musicBatchSize = 10;
+                        for (let i = 0; i < musicFiles.length; i += musicBatchSize) {
+                            const batch = musicFiles.slice(i, i + musicBatchSize);
+
+                            await Promise.all(batch.map(async (filename) => {
+                                try {
+                                    const fileResponse = await fetch(`music/${filename}`);
+                                    const content = await fileResponse.arrayBuffer();
+                                    const uint8Array = new Uint8Array(content);
+
+                                    Module.FS.writeFile(`/keykit/music/${filename}`, uint8Array);
+                                    musicLoaded++;
+                                } catch (err) {
+                                    console.warn(`Failed to load music/${filename}:`, err);
+                                }
+                            }));
+                        }
+
+                        console.log('[' + new Date().toISOString() + '] Successfully loaded ' + musicLoaded + ' music files into /keykit/music/');
+                    } catch (err) {
+                        console.warn('Could not load music files:', err);
+                    }
+
+                } catch (err) {
+                    console.error('[' + new Date().toISOString() + '] Error loading library files:', err);
+                    console.log('Continuing without library files...');
+                }
+
+                // Allow main() to proceed
+                if (!filesLoaded) {
+                    filesLoaded = true;
+                    clearTimeout(loadTimeout);
+                    Module.removeRunDependency('loadLibraryFiles');
+                }
+            })();
+        }
+
+        // Initialize canvas for high-quality text rendering
+        function initCanvas() {
+            var canvas = document.getElementById('keykit-canvas');
+            if (canvas) {
+                // Enable willReadFrequently for better performance with getImageData
+                var ctx = canvas.getContext('2d', { willReadFrequently: true });
+                // Enable text anti-aliasing and subpixel rendering
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                // Set default font
+                ctx.font = '16px monospace';
+                ctx.textBaseline = 'top';
+                console.log('[' + new Date().toISOString() + '] Canvas initialized with high-quality text rendering and willReadFrequently');
+            }
+        }
+
+        // Configuration for Emscripten Module
+        var Module = {
+            preRun: [initMIDI, loadLibraryFiles, initCanvas],
+            postRun: [function() {
+                // Mark runtime as ready after initialization completes
+                wasmRuntimeReady = true;
+                console.log('[' + new Date().toISOString() + '] WASM runtime fully initialized');
+            }],
+            print: (function() {
+                var element = document.getElementById('output');
+                if (element) element.value = ''; // Clear on load
+                return function(text) {
+                    if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+                    console.log(text);
+                    if (element) {
+                        element.innerHTML += text + '\n';
+                        element.scrollTop = element.scrollHeight; // Scroll to bottom
+                    }
+                };
+            })(),
+            printErr: function(text) {
+                if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+                console.error(text);
+                var element = document.getElementById('output');
+                if (element) {
+                    element.innerHTML += '<span style="color: #ff5555;">' + text + '</span>\n';
+                    element.scrollTop = element.scrollHeight;
+                }
+            },
+            canvas: (function() {
+                var canvas = document.getElementById('keykit-canvas');
+
+                // Prevent right-click context menu
+                canvas.addEventListener('contextmenu', function(e) {
+                    e.preventDefault();
+                }, false);
+
+                // Make canvas focusable for keyboard input
+                canvas.tabIndex = 0;
+                canvas.focus();
+
+                return canvas;
+            })(),
+            setStatus: function(text) {
+                var statusElement = document.getElementById('status-text');
+                var progressBar = document.getElementById('progress-bar');
+
+                if (!text) {
+                    // Module is ready
+                    statusElement.textContent = 'Ready';
+                    statusElement.style.color = '#4CAF50';
+                    progressBar.style.width = '100%';
+                    setTimeout(function() {
+                        document.getElementById('status').style.display = 'none';
+                    }, 1000);
+                } else {
+                    statusElement.textContent = text;
+                    statusElement.style.color = '#fff';
+
+                    // Parse progress from status text
+                    var match = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+                    if (match) {
+                        var now = parseFloat(match[2]);
+                        var total = parseFloat(match[4]);
+                        var percent = (now / total) * 100;
+                        progressBar.style.width = percent + '%';
+                    }
+                }
+            },
+            totalDependencies: 0,
+            monitorRunDependencies: function(left) {
+                this.totalDependencies = Math.max(this.totalDependencies, left);
+                Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
+            }
+        };
+
+        Module.setStatus('Downloading...');
+
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            var string = msg.toLowerCase();
+            var substring = "script error";
+            if (string.indexOf(substring) > -1) {
+                alert('Script Error: See Browser Console for Detail');
+            } else {
+                var message = [
+                    'Message: ' + msg,
+                    'URL: ' + url,
+                    'Line: ' + lineNo,
+                    'Column: ' + columnNo,
+                    'Error object: ' + JSON.stringify(error)
+                ].join(' - ');
+
+                alert(message);
+            }
+            return false;
+        };
+
+        // Current canvas size
+        var currentCanvasWidth = 1024;
+        var currentCanvasHeight = 768;
+
+        // Function to set canvas size (called by size buttons)
+        function setCanvasSize(width, height) {
+            var canvas = document.getElementById('keykit-canvas');
+            var container = document.getElementById('canvas-container');
+            var mainContainer = document.getElementById('container');
+            if (!canvas || !container) {
+                console.warn('Canvas or container not found');
+                return;
+            }
+
+            // Update current size
+            currentCanvasWidth = width;
+            currentCanvasHeight = height;
+
+            // Update canvas dimensions (this clears the canvas and resets context state)
+            canvas.width = width;
+            canvas.height = height;
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+
+            // Restore canvas context state after resize (canvas resize resets all context properties)
+            var ctx = canvas.getContext('2d');
+            if (window.keykitCurrentFont) {
+                ctx.font = window.keykitCurrentFont;
+            }
+            if (window.keykitCurrentStrokeColor) {
+                ctx.strokeStyle = window.keykitCurrentStrokeColor;
+            }
+            if (window.keykitCurrentFillColor) {
+                ctx.fillStyle = window.keykitCurrentFillColor;
+            }
+            if (window.keykitCurrentLineWidth) {
+                ctx.lineWidth = window.keykitCurrentLineWidth;
+            }
+
+            // Update container dimensions
+            container.style.width = width + 'px';
+            container.style.minWidth = width + 'px';
+            container.style.maxWidth = width + 'px';
+            container.style.height = height + 'px';
+            container.style.minHeight = height + 'px';
+            container.style.maxHeight = height + 'px';
+
+            // Update main container width
+            mainContainer.style.width = Math.max(width, 1024) + 'px';
+
+            // Update button highlighting
+            var buttons = document.querySelectorAll('.size-btn');
+            buttons.forEach(function(btn) {
+                if (btn.textContent === width + 'x' + height) {
+                    btn.style.background = '#4CAF50';
+                } else {
+                    btn.style.background = '#666';
+                }
+            });
+
+            console.log('[CANVAS] Canvas resized to ' + width + 'x' + height);
+
+            // Notify C code of canvas size change
+            if (wasmRuntimeReady && typeof Module !== 'undefined' && Module._mdep_on_window_resize) {
+                try {
+                    Module._mdep_on_window_resize(width, height);
+                    console.log('[CANVAS] Notified C code of resize');
+                } catch (e) {
+                    console.error('[CANVAS] Error calling C callback:', e);
+                }
+            }
+        }
+
+        // Initialize canvas to default size
+        function resizeCanvas() {
+            var canvas = document.getElementById('keykit-canvas');
+            if (!canvas) {
+                console.warn('Canvas not found, skipping initialization');
+                return;
+            }
+
+            // Only set if dimensions are different (setting dimensions clears the canvas)
+            var needsResize = (canvas.width !== currentCanvasWidth || canvas.height !== currentCanvasHeight);
+
+            if (needsResize) {
+                canvas.width = currentCanvasWidth;
+                canvas.height = currentCanvasHeight;
+                console.log('[CANVAS] Canvas initialized to ' + canvas.width + 'x' + canvas.height);
+
+                // Notify C code of canvas size (only if runtime is fully initialized)
+                if (wasmRuntimeReady && typeof Module !== 'undefined' && Module._mdep_on_window_resize) {
+                    try {
+                        console.log('[CANVAS] Calling Module._mdep_on_window_resize(' + currentCanvasWidth + ', ' + currentCanvasHeight + ')');
+                        Module._mdep_on_window_resize(currentCanvasWidth, currentCanvasHeight);
+                        console.log('[CANVAS] Successfully notified C code');
+                    } catch (e) {
+                        console.error('[CANVAS] Error calling C callback:', e);
+                    }
+                }
+            }
+        }
+
+        // Request MIDI permissions on page load (optional)
+        window.addEventListener('load', function() {
+            console.log('[' + new Date().toISOString() + '] KeyKit WebAssembly shell loaded successfully');
+            // Use setTimeout to ensure DOM is fully ready
+            setTimeout(resizeCanvas, 100);
+        });
+
+        // Note: Canvas is fixed at 1024x768, no resize handling needed
+
+        // Helper function to print stack trace from console
+        window.printStackTrace = function() {
+            console.log('Current Stack Trace:');
+            console.trace();
+        };
+
+        // Automatically print stack trace on errors
+        window.addEventListener('error', function(e) {
+            console.error('JavaScript Error:', e.message);
+            console.error('Stack:', e.error?.stack || new Error().stack);
+        });
+    </script>
+
+    <script async type="text/javascript" src="keykit.js"></script>
+</body>
+</html>
