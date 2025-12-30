@@ -51,7 +51,7 @@ def compile_wasm():
         sys.exit(1)
     
     # Output file (in current directory)
-    output = "keykit.html"
+    output = "keykit.js"
 
     # Compiler flags
     flags = [
@@ -59,7 +59,6 @@ def compile_wasm():
         "-Isrc",
         "-o", output,
         "--js-library", "keykit_library.js",  # Include JavaScript library
-        "--shell-file", "keykit_shell.html",  # Custom HTML shell
         "-s", "ALLOW_MEMORY_GROWTH=1",
         "-s", "ASYNCIFY=1",  # Important for blocking calls
         "-s", "ASYNCIFY_IMPORTS=['js_sync_from_real']",  # Functions that can suspend

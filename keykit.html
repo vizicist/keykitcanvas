@@ -195,6 +195,10 @@
                 <button onclick="showHelp();" style="padding: 5px 15px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">
                     Help
                 </button>
+                <span style="margin: 0 10px; color: #444;">|</span>
+                <button onclick="openWebGLWindow();" style="padding: 5px 15px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    WebGL Test
+                </button>
             </div>
         </div>
 
@@ -329,6 +333,212 @@
             helpWindow.document.close();
         }
 
+        // WebGL window reference (accessible from main page)
+        var webglWindow = null;
+
+        // Open a new window with a full-window WebGL canvas with drawing API
+        function openWebGLWindow() {
+            var webglContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebGL Test</title>
+    <style>
+        * { margin: 0; padding: 0; }
+        html, body { width: 100%; height: 100%; overflow: hidden; }
+        canvas { display: block; width: 100%; height: 100%; }
+    </style>
+</head>
+<body>
+    <canvas id="glcanvas"></canvas>
+    <script>
+        const canvas = document.getElementById('glcanvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+
+        if (!gl) {
+            alert('WebGL not supported');
+        } else {
+            // Current color state
+            let currentColor = [1.0, 0.0, 0.0, 1.0]; // Red default
+
+            // Vertex shader - supports position and per-vertex transform
+            const vsSource = \`
+                attribute vec2 aPosition;
+                uniform vec2 uResolution;
+                void main() {
+                    // Convert from pixels to clip space (-1 to 1)
+                    vec2 clipSpace = (aPosition / uResolution) * 2.0 - 1.0;
+                    gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
+                }
+            \`;
+
+            // Fragment shader - uses uniform color
+            const fsSource = \`
+                precision mediump float;
+                uniform vec4 uColor;
+                void main() {
+                    gl_FragColor = uColor;
+                }
+            \`;
+
+            // Compile shader
+            function compileShader(type, source) {
+                const shader = gl.createShader(type);
+                gl.shaderSource(shader, source);
+                gl.compileShader(shader);
+                if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                    console.error('Shader compile error:', gl.getShaderInfoLog(shader));
+                    gl.deleteShader(shader);
+                    return null;
+                }
+                return shader;
+            }
+
+            // Create program
+            const vertexShader = compileShader(gl.VERTEX_SHADER, vsSource);
+            const fragmentShader = compileShader(gl.FRAGMENT_SHADER, fsSource);
+            const program = gl.createProgram();
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader);
+            gl.linkProgram(program);
+
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                console.error('Program link error:', gl.getProgramInfoLog(program));
+            }
+
+            gl.useProgram(program);
+
+            // Get uniform and attribute locations
+            const aPosition = gl.getAttribLocation(program, 'aPosition');
+            const uResolution = gl.getUniformLocation(program, 'uResolution');
+            const uColor = gl.getUniformLocation(program, 'uColor');
+
+            // Create buffer for dynamic geometry
+            const buffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+            gl.enableVertexAttribArray(aPosition);
+            gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
+
+            // Resize canvas to fill window
+            function resize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                gl.viewport(0, 0, canvas.width, canvas.height);
+                gl.uniform2f(uResolution, canvas.width, canvas.height);
+            }
+
+            // ============================================
+            // Drawing API - callable from main window
+            // ============================================
+
+            // Clear the canvas
+            window.glClear = function(r, g, b) {
+                r = r !== undefined ? r : 0.1;
+                g = g !== undefined ? g : 0.1;
+                b = b !== undefined ? b : 0.1;
+                gl.clearColor(r, g, b, 1.0);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+            };
+
+            // Set current drawing color (0-1 range)
+            window.glSetColor = function(r, g, b, a) {
+                currentColor = [r, g, b, a !== undefined ? a : 1.0];
+            };
+
+            // Set color from RGB (0-255 range)
+            window.glSetColorRGB = function(r, g, b, a) {
+                currentColor = [r/255, g/255, b/255, a !== undefined ? a/255 : 1.0];
+            };
+
+            // Draw a filled rectangle (pixel coordinates)
+            window.glFillRect = function(x, y, width, height) {
+                const vertices = new Float32Array([
+                    x, y,
+                    x + width, y,
+                    x, y + height,
+                    x + width, y + height
+                ]);
+                gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.DYNAMIC_DRAW);
+                gl.uniform4fv(uColor, currentColor);
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            };
+
+            // Draw a line (pixel coordinates)
+            window.glLine = function(x1, y1, x2, y2) {
+                const vertices = new Float32Array([x1, y1, x2, y2]);
+                gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.DYNAMIC_DRAW);
+                gl.uniform4fv(uColor, currentColor);
+                gl.drawArrays(gl.LINES, 0, 2);
+            };
+
+            // Draw multiple connected lines (pixel coordinates)
+            window.glLines = function(points) {
+                if (points.length < 4) return;
+                const vertices = new Float32Array(points);
+                gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.DYNAMIC_DRAW);
+                gl.uniform4fv(uColor, currentColor);
+                gl.drawArrays(gl.LINE_STRIP, 0, points.length / 2);
+            };
+
+            // Draw a filled triangle (pixel coordinates)
+            window.glFillTriangle = function(x1, y1, x2, y2, x3, y3) {
+                const vertices = new Float32Array([x1, y1, x2, y2, x3, y3]);
+                gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.DYNAMIC_DRAW);
+                gl.uniform4fv(uColor, currentColor);
+                gl.drawArrays(gl.TRIANGLES, 0, 3);
+            };
+
+            // Draw a circle (approximated with triangles)
+            window.glFillCircle = function(cx, cy, radius, segments) {
+                segments = segments || 32;
+                const vertices = [cx, cy];
+                for (let i = 0; i <= segments; i++) {
+                    const angle = (i / segments) * Math.PI * 2;
+                    vertices.push(cx + Math.cos(angle) * radius);
+                    vertices.push(cy + Math.sin(angle) * radius);
+                }
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
+                gl.uniform4fv(uColor, currentColor);
+                gl.drawArrays(gl.TRIANGLE_FAN, 0, segments + 2);
+            };
+
+            // Get canvas dimensions
+            window.glGetWidth = function() { return canvas.width; };
+            window.glGetHeight = function() { return canvas.height; };
+
+            // Mark as ready
+            window.glReady = true;
+
+            // Initialize
+            window.addEventListener('resize', resize);
+            resize();
+
+            // Draw initial red square as demo
+            window.glClear();
+            window.glSetColor(1, 0, 0, 1);
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            window.glFillRect(cx - 50, cy - 50, 100, 100);
+
+            console.log('WebGL window ready. API: glClear, glSetColor, glSetColorRGB, glFillRect, glLine, glLines, glFillTriangle, glFillCircle, glGetWidth, glGetHeight');
+        }
+    <\/script>
+</body>
+</html>
+`;
+            webglWindow = window.open('', 'WebGLTest', 'width=800,height=600,resizable=yes');
+            webglWindow.document.write(webglContent);
+            webglWindow.document.close();
+
+            // Store reference globally for access from console/WASM
+            window.webglWindow = webglWindow;
+        }
+
+        // Helper function to check if WebGL window is ready
+        function isWebGLReady() {
+            return webglWindow && !webglWindow.closed && webglWindow.glReady;
+        }
+
         // Flag to track if WASM runtime is fully initialized
         var wasmRuntimeReady = false;
 
@@ -447,7 +657,7 @@
                             path: '/keykit/libcore',
                             manifest: 'libcore/libcore_manifest.json',
                             enabled: true,
-                            batchSize: 5,
+                            batchSize: 100,
                             description: 'Core library functions'
                         },
                         {
@@ -455,7 +665,7 @@
                             path: '/keykit/libtools',
                             manifest: 'libtools/libtools_manifest.json',
                             enabled: true,
-                            batchSize: 10,
+                            batchSize: 100,
                             description: 'User tools and utilities'
                         },
                         {
@@ -463,7 +673,7 @@
                             path: '/keykit/libextra',
                             manifest: 'libextra/libextra_manifest.json',
                             enabled: true,
-                            batchSize: 10,
+                            batchSize: 100,
                             description: 'Extra/experimental libraries'
                         }
                     ];
@@ -1334,6 +1544,6 @@
         });
     </script>
 
-    <script async type="text/javascript" src="keykit.js"></script>
+    <script async src="keykit.js"></script>
 </body>
 </html>
