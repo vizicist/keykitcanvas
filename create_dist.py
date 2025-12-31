@@ -9,7 +9,7 @@ Usage:
     python create_dist.py <output_zipfile>
 
 Example:
-    python create_dist.py keykit_dist.zip
+    python create_dist.py keykitcanvas.zip
 """
 
 import os

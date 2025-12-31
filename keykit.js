@@ -5657,9 +5657,67 @@ async function createWasm() {
           });
       };
 
+  function _js_webgl_clear(r, g, b) {
+          if (window.webglWindow && !window.webglWindow.closed && window.webglWindow.glClear) {
+              window.webglWindow.glClear(r, g, b);
+          }
+      }
+
+  function _js_webgl_create_pass(source_ptr) {
+          if (!window.webglWindow || window.webglWindow.closed || !window.webglWindow.glCreatePass) {
+              return -1;
+          }
+          var source = UTF8ToString(source_ptr);
+          return window.webglWindow.glCreatePass(source);
+      }
+
   function _js_webgl_draw_line(x0, y0, x1, y1) {
           if (window.webglWindow && !window.webglWindow.closed && window.webglWindow.glLine) {
               window.webglWindow.glLine(x0, y0, x1, y1);
+          }
+      }
+
+  function _js_webgl_run_pass(pass_id, to_screen) {
+          if (!window.webglWindow || window.webglWindow.closed || !window.webglWindow.glRunPass) {
+              return;
+          }
+          window.webglWindow.glRunPass(pass_id, to_screen !== 0);
+      }
+
+  function _js_webgl_set_color(r, g, b, a) {
+          if (window.webglWindow && !window.webglWindow.closed && window.webglWindow.glSetColor) {
+              window.webglWindow.glSetColor(r, g, b, a);
+          }
+      }
+
+  function _js_webgl_set_pass_order(ids_ptr, count) {
+          if (!window.webglWindow || window.webglWindow.closed || !window.webglWindow.glSetPassOrder) {
+              return;
+          }
+          var ids = [];
+          for (var i = 0; i < count; i++) {
+              ids.push(getValue(ids_ptr + i * 4, 'i32'));
+          }
+          window.webglWindow.glSetPassOrder(ids);
+      }
+
+  function _js_webgl_set_uniform_float(pass_id, name_ptr, value) {
+          if (!window.webglWindow || window.webglWindow.closed || !window.webglWindow.glSetUniform) {
+              return;
+          }
+          var name = UTF8ToString(name_ptr);
+          window.webglWindow.glSetUniform(pass_id, name, value);
+      }
+
+  function _js_webgl_start_animation() {
+          if (window.webglWindow && !window.webglWindow.closed && window.webglWindow.glStartAnimation) {
+              window.webglWindow.glStartAnimation();
+          }
+      }
+
+  function _js_webgl_stop_animation() {
+          if (window.webglWindow && !window.webglWindow.closed && window.webglWindow.glStopAnimation) {
+              window.webglWindow.glStopAnimation();
           }
       }
 
@@ -6719,7 +6777,7 @@ function checkIncomingModuleAPI() {
   ignoredModuleProp('fetchSettings');
 }
 var ASM_CONSTS = {
-  168824: () => { if (Module.keypath) { var len = lengthBytesUTF8(Module.keypath) + 1; var str = _malloc(len); stringToUTF8(Module.keypath, str, len); return str; } return 0; }
+  169384: () => { if (Module.keypath) { var len = lengthBytesUTF8(Module.keypath) + 1; var str = _malloc(len); stringToUTF8(Module.keypath, str, len); return str; } return 0; }
 };
 
 // Imports from the Wasm binary.
@@ -6971,7 +7029,23 @@ var wasmImports = {
   /** @export */
   js_sync_from_real: _js_sync_from_real,
   /** @export */
+  js_webgl_clear: _js_webgl_clear,
+  /** @export */
+  js_webgl_create_pass: _js_webgl_create_pass,
+  /** @export */
   js_webgl_draw_line: _js_webgl_draw_line,
+  /** @export */
+  js_webgl_run_pass: _js_webgl_run_pass,
+  /** @export */
+  js_webgl_set_color: _js_webgl_set_color,
+  /** @export */
+  js_webgl_set_pass_order: _js_webgl_set_pass_order,
+  /** @export */
+  js_webgl_set_uniform_float: _js_webgl_set_uniform_float,
+  /** @export */
+  js_webgl_start_animation: _js_webgl_start_animation,
+  /** @export */
+  js_webgl_stop_animation: _js_webgl_stop_animation,
   /** @export */
   js_websocket_close: _js_websocket_close,
   /** @export */

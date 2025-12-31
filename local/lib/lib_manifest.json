@@ -1,4 +1,6 @@
 [
   "foofunc.k",
-  "keylib.k"
+  "keylib.k",
+  "shadertest.k",
+  "webgltest.k"
 ]

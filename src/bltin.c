@@ -2802,6 +2802,14 @@ bi_nullfunc(int argc)
 
 #ifdef __EMSCRIPTEN__
 extern void js_webgl_draw_line(int x0, int y0, int x1, int y1);
+extern int js_webgl_create_pass(const char *source);
+extern void js_webgl_set_uniform_float(int pass_id, const char *name, double value);
+extern void js_webgl_run_pass(int pass_id, int to_screen);
+extern void js_webgl_set_pass_order(int *ids, int count);
+extern void js_webgl_start_animation(void);
+extern void js_webgl_stop_animation(void);
+extern void js_webgl_clear(double r, double g, double b);
+extern void js_webgl_set_color(double r, double g, double b, double a);
 
 void
 bi_webgl_line(int argc)
@@ -2809,6 +2817,113 @@ bi_webgl_line(int argc)
 	if ( argc < 4 )
 		execerror("usage: webgl_line(x0, y0, x1, y1)");
 	js_webgl_draw_line((int)numval(ARG(0)), (int)numval(ARG(1)), (int)numval(ARG(2)), (int)numval(ARG(3)));
+	ret(Nullval);
+}
+
+void
+bi_webgl_create_pass(int argc)
+{
+	if ( argc < 1 )
+		execerror("usage: webgl_create_pass(shader_source)");
+	char *source = needstr("webgl_create_pass", ARG(0));
+	int pass_id = js_webgl_create_pass(source);
+	ret(numdatum((long)pass_id));
+}
+
+void
+bi_webgl_set_uniform(int argc)
+{
+	if ( argc < 3 )
+		execerror("usage: webgl_set_uniform(pass_id, name, value)");
+	int pass_id = (int)numval(ARG(0));
+	char *name = needstr("webgl_set_uniform", ARG(1));
+	double value = numval(ARG(2));
+	js_webgl_set_uniform_float(pass_id, name, value);
+	ret(Nullval);
+}
+
+void
+bi_webgl_run_pass(int argc)
+{
+	if ( argc < 2 )
+		execerror("usage: webgl_run_pass(pass_id, to_screen)");
+	int pass_id = (int)numval(ARG(0));
+	int to_screen = (int)numval(ARG(1));
+	js_webgl_run_pass(pass_id, to_screen);
+	ret(Nullval);
+}
+
+void
+bi_webgl_set_pass_order(int argc)
+{
+	int i;
+	int *ids;
+	Datum d;
+	Datum dd;
+	Htablep arr;
+	Symbolp s;
+
+	if ( argc < 1 )
+		execerror("usage: webgl_set_pass_order(array_of_pass_ids)");
+	d = ARG(0);
+	if ( d.type != D_ARR )
+		execerror("webgl_set_pass_order: argument must be an array");
+	arr = d.u.arr;
+	int count = arrsize(arr);
+	ids = (int *)malloc(count * sizeof(int));
+	for ( i = 0; i < count; i++ ) {
+		s = arraysym(arr, numdatum((long)i), H_LOOK);
+		if ( s == NULL )
+			execerror("webgl_set_pass_order: array element %d not found", i);
+		dd = *symdataptr(s);
+		ids[i] = (int)numval(dd);
+	}
+	js_webgl_set_pass_order(ids, count);
+	free(ids);
+	ret(Nullval);
+}
+
+void
+bi_webgl_start_anim(int argc)
+{
+	dummyusage(argc);
+	js_webgl_start_animation();
+	ret(Nullval);
+}
+
+void
+bi_webgl_stop_anim(int argc)
+{
+	dummyusage(argc);
+	js_webgl_stop_animation();
+	ret(Nullval);
+}
+
+void
+bi_webgl_clear(int argc)
+{
+	double r = 0.1, g = 0.1, b = 0.1;
+	if ( argc >= 3 ) {
+		r = numval(ARG(0));
+		g = numval(ARG(1));
+		b = numval(ARG(2));
+	}
+	js_webgl_clear(r, g, b);
+	ret(Nullval);
+}
+
+void
+bi_webgl_set_color(int argc)
+{
+	double r, g, b, a = 1.0;
+	if ( argc < 3 )
+		execerror("usage: webgl_set_color(r, g, b [, a])");
+	r = numval(ARG(0));
+	g = numval(ARG(1));
+	b = numval(ARG(2));
+	if ( argc >= 4 )
+		a = numval(ARG(3));
+	js_webgl_set_color(r, g, b, a);
 	ret(Nullval);
 }
 #endif
@@ -2917,6 +3032,14 @@ struct bltinfo builtins[] = {
 	{ "objectinfo",	bi_objectinfo,	BI_OBJECTINFO },
 #ifdef __EMSCRIPTEN__
 	{ "webgl_line",	bi_webgl_line,	BI_WEBGL_LINE },
+	{ "webgl_create_pass",	bi_webgl_create_pass,	BI_WEBGL_CREATE_PASS },
+	{ "webgl_set_uniform",	bi_webgl_set_uniform,	BI_WEBGL_SET_UNIFORM },
+	{ "webgl_run_pass",	bi_webgl_run_pass,	BI_WEBGL_RUN_PASS },
+	{ "webgl_set_pass_order",	bi_webgl_set_pass_order,	BI_WEBGL_SET_PASS_ORDER },
+	{ "webgl_start_animation",	bi_webgl_start_anim,	BI_WEBGL_START_ANIM },
+	{ "webgl_stop_animation",	bi_webgl_stop_anim,	BI_WEBGL_STOP_ANIM },
+	{ "webgl_clear",	bi_webgl_clear,	BI_WEBGL_CLEAR },
+	{ "webgl_set_color",	bi_webgl_set_color,	BI_WEBGL_SET_COLOR },
 #endif
 	{ 0,		0,		0 }
 };
@@ -3053,8 +3176,24 @@ BLTINFUNC Bltinfuncs[] = {
 	bi_objectinfo,
 	o_fillpolygon,
 #ifdef __EMSCRIPTEN__
-	bi_webgl_line
+	bi_webgl_line,
+	bi_webgl_create_pass,
+	bi_webgl_set_uniform,
+	bi_webgl_run_pass,
+	bi_webgl_set_pass_order,
+	bi_webgl_start_anim,
+	bi_webgl_stop_anim,
+	bi_webgl_clear,
+	bi_webgl_set_color
 #else
+	bi_nullfunc,
+	bi_nullfunc,
+	bi_nullfunc,
+	bi_nullfunc,
+	bi_nullfunc,
+	bi_nullfunc,
+	bi_nullfunc,
+	bi_nullfunc,
 	bi_nullfunc
 #endif
 };

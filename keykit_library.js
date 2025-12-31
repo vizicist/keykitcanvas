@@ -30,9 +30,74 @@ mergeInto(LibraryManager.library, {
 
     // Draw line in WebGL window
     js_webgl_draw_line: function (x0, y0, x1, y1) {
-        console.log('js_webgl_draw_line called with:', x0, y0, x1, y1);
         if (window.webglWindow && !window.webglWindow.closed && window.webglWindow.glLine) {
             window.webglWindow.glLine(x0, y0, x1, y1);
+        }
+    },
+
+    // Create a shader pass, returns pass ID or -1 on error
+    js_webgl_create_pass: function (source_ptr) {
+        if (!window.webglWindow || window.webglWindow.closed || !window.webglWindow.glCreatePass) {
+            return -1;
+        }
+        var source = UTF8ToString(source_ptr);
+        return window.webglWindow.glCreatePass(source);
+    },
+
+    // Set a float uniform on a pass
+    js_webgl_set_uniform_float: function (pass_id, name_ptr, value) {
+        if (!window.webglWindow || window.webglWindow.closed || !window.webglWindow.glSetUniform) {
+            return;
+        }
+        var name = UTF8ToString(name_ptr);
+        window.webglWindow.glSetUniform(pass_id, name, value);
+    },
+
+    // Run a single pass
+    js_webgl_run_pass: function (pass_id, to_screen) {
+        if (!window.webglWindow || window.webglWindow.closed || !window.webglWindow.glRunPass) {
+            return;
+        }
+        window.webglWindow.glRunPass(pass_id, to_screen !== 0);
+    },
+
+    // Set pass order from an array of pass IDs
+    js_webgl_set_pass_order: function (ids_ptr, count) {
+        if (!window.webglWindow || window.webglWindow.closed || !window.webglWindow.glSetPassOrder) {
+            return;
+        }
+        var ids = [];
+        for (var i = 0; i < count; i++) {
+            ids.push(getValue(ids_ptr + i * 4, 'i32'));
+        }
+        window.webglWindow.glSetPassOrder(ids);
+    },
+
+    // Start animation loop
+    js_webgl_start_animation: function () {
+        if (window.webglWindow && !window.webglWindow.closed && window.webglWindow.glStartAnimation) {
+            window.webglWindow.glStartAnimation();
+        }
+    },
+
+    // Stop animation loop
+    js_webgl_stop_animation: function () {
+        if (window.webglWindow && !window.webglWindow.closed && window.webglWindow.glStopAnimation) {
+            window.webglWindow.glStopAnimation();
+        }
+    },
+
+    // Clear the WebGL window
+    js_webgl_clear: function (r, g, b) {
+        if (window.webglWindow && !window.webglWindow.closed && window.webglWindow.glClear) {
+            window.webglWindow.glClear(r, g, b);
+        }
+    },
+
+    // Set color for primitive drawing (0-1 range)
+    js_webgl_set_color: function (r, g, b, a) {
+        if (window.webglWindow && !window.webglWindow.closed && window.webglWindow.glSetColor) {
+            window.webglWindow.glSetColor(r, g, b, a);
         }
     },
 

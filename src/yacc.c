@@ -2808,8 +2808,15 @@ yylex()
 		    rechar:
 			if ( ch == EOF )
 				execerror("missing ending-quote on string");
-			if ( ch == '\n' )
-				execerror("Newline inside string?!");
+			if ( ch == '\r' ) {
+				/* Skip \r - if followed by \n, the \n will be processed next */
+				continue;
+			}
+			if ( ch == '\n' ) {
+				makeroom((long)(si+2),&Msg1,&Msg1size);
+				Msg1[si++] = ch;
+				continue;
+			}
 			/* interpret \-characters */
 			if ( ch == '\\' ) {
 				switch ( ch=yyinput() ) {

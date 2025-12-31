@@ -960,8 +960,14 @@ restart:
 			}
 			return(EOF);
 		}
-		if ( ch == '\r' )
+		if ( ch == '\r' ) {
+			/* Convert \r to \n, and consume following \n if present (Windows \r\n) */
+			int nextch = getc(Fin);
+			if ( nextch != '\n' && nextch != EOF ) {
+				ungetc(nextch, Fin);
+			}
 			ch = '\n';
+		}
 
 		if ( ch == '\n' ) {
 			/* We only adjust Lineno when we read a character */
