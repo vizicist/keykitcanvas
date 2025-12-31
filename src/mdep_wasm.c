@@ -381,7 +381,7 @@ static int last_canvas_height = 0;
 // complex KeyKit functions from here, as this is called asynchronously from
 // JavaScript and can cause stack corruption with ASYNCIFY.
 EMSCRIPTEN_KEEPALIVE
-void mdep_on_midi_message(int device_index, int status, int data1, int data2)
+void jscallback_on_midi_message(int device_index, int status, int data1, int data2)
 {
     // Simply add MIDI bytes to buffer - no complex operations
     if (midi_buffer_count + 3 <= MIDI_BUFFER_SIZE) {
@@ -421,7 +421,7 @@ int mdep_mouse_convert(int buttons) {
 
 // Callback from JavaScript for mouse movement
 EMSCRIPTEN_KEEPALIVE
-void mdep_on_mouse_move(int x, int y, int modifiers)
+void jscallback_on_mouse_move(int x, int y, int modifiers)
 {
     // Update current mouse position
     current_mouse_x = x;
@@ -443,7 +443,7 @@ void mdep_on_mouse_move(int x, int y, int modifiers)
 
 // Callback from JavaScript for mouse button events
 EMSCRIPTEN_KEEPALIVE
-void mdep_on_mouse_button(int down, int x, int y, int buttons, int modifiers)
+void jscallback_on_mouse_button(int down, int x, int y, int buttons, int modifiers)
 {
     // Update current mouse state
     current_mouse_x = x;
@@ -468,7 +468,7 @@ void mdep_on_mouse_button(int down, int x, int y, int buttons, int modifiers)
 
 // Callback from JavaScript for keyboard events
 EMSCRIPTEN_KEEPALIVE
-void mdep_on_key_event(int down, int keycode, int ctrl, int shift, int alt)
+void jscallback_on_key_event(int down, int keycode, int ctrl, int shift, int alt)
 {
     // Update modifier key state
     current_ctrl_down = ctrl;
@@ -494,7 +494,7 @@ void mdep_on_key_event(int down, int keycode, int ctrl, int shift, int alt)
 
 // Callback from JavaScript when window is resized
 EMSCRIPTEN_KEEPALIVE
-void mdep_on_window_resize(int width, int height)
+void jscallback_on_window_resize(int width, int height)
 {
     // Mark that a resize event occurred
     window_resize_pending = 1;
@@ -2114,7 +2114,7 @@ mdep_localaddresses(Datum d)
 // NATS callback - called from JavaScript when message arrives
 // Keep this minimal to avoid ASYNCIFY issues
 EMSCRIPTEN_KEEPALIVE
-void mdep_on_nats_message(const char *subject, const char *data)
+void jscallback_on_nats_message(const char *subject, const char *data)
 {
     // Simply buffer the message for later processing
     if (nats_message_count < NATS_MESSAGE_BUFFER_SIZE) {
@@ -2294,7 +2294,7 @@ static void sendsockedaway(Myport *mp)
 
 // WebSocket event callback from JavaScript
 EMSCRIPTEN_KEEPALIVE
-void mdep_on_websocket_event(int portId, const char *event)
+void jscallback_on_websocket_event(int portId, const char *event)
 {
     printf("[PORT C] WebSocket event on port %d: %s\n", portId, event);
 

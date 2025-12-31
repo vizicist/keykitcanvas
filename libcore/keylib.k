@@ -483,6 +483,7 @@
 #library typealot.k typealot_prompt
 #library typealot.k typealot_read
 #library typealot.k typealot_write
+#library updatelib.k synclocal
 #library updatelib.k updatelib
 #library updatelib.k readeveryfile
 #library updatelib.k rereadlib

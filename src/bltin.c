@@ -2800,6 +2800,19 @@ bi_nullfunc(int argc)
 	ret(Nullval);
 }
 
+#ifdef __EMSCRIPTEN__
+extern void js_webgl_draw_line(int x0, int y0, int x1, int y1);
+
+void
+bi_webgl_line(int argc)
+{
+	if ( argc < 4 )
+		execerror("usage: webgl_line(x0, y0, x1, y1)");
+	js_webgl_draw_line((int)numval(ARG(0)), (int)numval(ARG(1)), (int)numval(ARG(2)), (int)numval(ARG(3)));
+	ret(Nullval);
+}
+#endif
+
 /* The order of elements in this array is not important */
 struct bltinfo builtins[] = {
 	{ "sizeof",	bi_sizeof,	BI_SIZEOF },
@@ -2902,6 +2915,9 @@ struct bltinfo builtins[] = {
 	{ "midi",		bi_midi,	BI_MIDI },
 	{ "bitmap",	bi_bitmap,	BI_BITMAP },
 	{ "objectinfo",	bi_objectinfo,	BI_OBJECTINFO },
+#ifdef __EMSCRIPTEN__
+	{ "webgl_line",	bi_webgl_line,	BI_WEBGL_LINE },
+#endif
 	{ 0,		0,		0 }
 };
 
@@ -3035,5 +3051,10 @@ BLTINFUNC Bltinfuncs[] = {
 	bi_midi,
 	bi_bitmap,
 	bi_objectinfo,
-	o_fillpolygon
+	o_fillpolygon,
+#ifdef __EMSCRIPTEN__
+	bi_webgl_line
+#else
+	bi_nullfunc
+#endif
 };

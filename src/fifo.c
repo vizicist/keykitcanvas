@@ -574,7 +574,7 @@ putonmousefifo(int mval,int x,int y,int pressed,int mod)
 			t = Str_up;
 			break;
 		}
-		da = newarrdatum(0,7);
+		da = newarrdatum(0,8);
 		setarraydata(da.u.arr,Str_type,t);
 		setarraydata(da.u.arr,Str_x,numdatum(lx));
 		setarraydata(da.u.arr,Str_y,numdatum(ly));

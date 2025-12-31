@@ -28,6 +28,14 @@ mergeInto(LibraryManager.library, {
         ctx.stroke();
     },
 
+    // Draw line in WebGL window
+    js_webgl_draw_line: function (x0, y0, x1, y1) {
+        console.log('js_webgl_draw_line called with:', x0, y0, x1, y1);
+        if (window.webglWindow && !window.webglWindow.closed && window.webglWindow.glLine) {
+            window.webglWindow.glLine(x0, y0, x1, y1);
+        }
+    },
+
     // Draw rectangle outline
     js_draw_rect: function (x, y, w, h) {
         var canvas = document.getElementById('keykit-canvas');
@@ -356,7 +364,7 @@ mergeInto(LibraryManager.library, {
             // Call back into C code with MIDI data
             if (typeof Module !== 'undefined' && Module.ccall) {
                 try {
-                    Module.ccall('mdep_on_midi_message', null,
+                    Module.ccall('jscallback_on_midi_message', null,
                                  ['number', 'number', 'number', 'number'],
                                  [index, status, data1, data2]);
                     // console.log('[MIDI IN] Successfully called C callback');
@@ -463,7 +471,7 @@ mergeInto(LibraryManager.library, {
 
             // Call C callback if defined
             if (typeof Module !== 'undefined' && Module.ccall) {
-                Module.ccall('mdep_on_mouse_move', null,
+                Module.ccall('jscallback_on_mouse_move', null,
                              ['number', 'number', 'number'],
                              [window.keykitMouseX, window.keykitMouseY, window.keykitMouseModifiers]);
             }
@@ -480,7 +488,7 @@ mergeInto(LibraryManager.library, {
             window.keykitMouseButtons |= (1 << e.button);
 
             if (typeof Module !== 'undefined' && Module.ccall) {
-                Module.ccall('mdep_on_mouse_button', null,
+                Module.ccall('jscallback_on_mouse_button', null,
                              ['number', 'number', 'number', 'number', 'number'],
                              [1, window.keykitMouseX, window.keykitMouseY, window.keykitMouseButtons, window.keykitMouseModifiers]);
             }
@@ -496,7 +504,7 @@ mergeInto(LibraryManager.library, {
             window.keykitMouseButtons &= ~(1 << e.button);
 
             if (typeof Module !== 'undefined' && Module.ccall) {
-                Module.ccall('mdep_on_mouse_button', null,
+                Module.ccall('jscallback_on_mouse_button', null,
                              ['number', 'number', 'number', 'number', 'number'],
                              [0, window.keykitMouseX, window.keykitMouseY, window.keykitMouseButtons, window.keykitMouseModifiers]);
             }
@@ -549,7 +557,7 @@ mergeInto(LibraryManager.library, {
 
             // Call C callback with modifier key state
             if (typeof Module !== 'undefined' && Module.ccall) {
-                Module.ccall('mdep_on_key_event', null,
+                Module.ccall('jscallback_on_key_event', null,
                              ['number', 'number', 'number', 'number', 'number'],
                              [1, keyCode, e.ctrlKey ? 1 : 0, e.shiftKey ? 1 : 0, e.altKey ? 1 : 0]);
             }
@@ -574,7 +582,7 @@ mergeInto(LibraryManager.library, {
             }
 
             if (typeof Module !== 'undefined' && Module.ccall) {
-                Module.ccall('mdep_on_key_event', null,
+                Module.ccall('jscallback_on_key_event', null,
                              ['number', 'number', 'number', 'number', 'number'],
                              [0, keyCode, e.ctrlKey ? 1 : 0, e.shiftKey ? 1 : 0, e.altKey ? 1 : 0]);
             }
@@ -848,7 +856,7 @@ mergeInto(LibraryManager.library, {
                         // Call C callback if available
                         if (typeof Module !== 'undefined' && Module.ccall) {
                             try {
-                                Module.ccall('mdep_on_nats_message', null,
+                                Module.ccall('jscallback_on_nats_message', null,
                                              ['string', 'string'],
                                              [msg.subject, data]);
                                 console.log('[NATS] Successfully called C callback');
@@ -927,7 +935,7 @@ mergeInto(LibraryManager.library, {
                     // Call C callback
                     if (typeof Module !== 'undefined' && Module.ccall) {
                         try {
-                            Module.ccall('mdep_on_nats_message', null,
+                            Module.ccall('jscallback_on_nats_message', null,
                                          ['string', 'string'],
                                          [msg.subject, data]);
                         } catch (e) {
@@ -996,7 +1004,7 @@ mergeInto(LibraryManager.library, {
                 // Notify C code
                 if (typeof Module !== 'undefined' && Module.ccall) {
                     try {
-                        Module.ccall('mdep_on_websocket_event', null,
+                        Module.ccall('jscallback_on_websocket_event', null,
                                      ['number', 'string'],
                                      [portId, 'open']);
                     } catch (e) {
@@ -1014,7 +1022,7 @@ mergeInto(LibraryManager.library, {
                 // Notify C code
                 if (typeof Module !== 'undefined' && Module.ccall) {
                     try {
-                        Module.ccall('mdep_on_websocket_event', null,
+                        Module.ccall('jscallback_on_websocket_event', null,
                                      ['number', 'string'],
                                      [portId, 'data']);
                     } catch (e) {
@@ -1035,7 +1043,7 @@ mergeInto(LibraryManager.library, {
                 // Notify C code
                 if (typeof Module !== 'undefined' && Module.ccall) {
                     try {
-                        Module.ccall('mdep_on_websocket_event', null,
+                        Module.ccall('jscallback_on_websocket_event', null,
                                      ['number', 'string'],
                                      [portId, 'close']);
                     } catch (e) {

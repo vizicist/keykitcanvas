@@ -1,6 +1,10 @@
 # This function checks to see if the keylib.k files (in each directory
 # mentioned in Keypath) need updating, and updates them.
 
+function synclocal() {
+	return(mdep("synclocal"))
+}
+
 function updatelib(forceit,forcerekeylib,path,reread) {
 	if ( nargs() < 1 )
 		forceit = 0

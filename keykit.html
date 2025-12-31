@@ -353,11 +353,14 @@
     <canvas id="glcanvas"></canvas>
     <script>
         const canvas = document.getElementById('glcanvas');
-        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        const gl = canvas.getContext('webgl', { preserveDrawingBuffer: true }) || canvas.getContext('experimental-webgl', { preserveDrawingBuffer: true });
 
         if (!gl) {
             alert('WebGL not supported');
         } else {
+            // Set default clear color to dark gray
+            gl.clearColor(0.1, 0.1, 0.1, 1.0);
+
             // Current color state
             let currentColor = [1.0, 0.0, 0.0, 1.0]; // Red default
 
@@ -421,8 +424,12 @@
 
             // Resize canvas to fill window
             function resize() {
-                canvas.width = window.innerWidth;
-                canvas.height = window.innerHeight;
+                var newWidth = window.innerWidth;
+                var newHeight = window.innerHeight;
+                if (canvas.width !== newWidth || canvas.height !== newHeight) {
+                    canvas.width = newWidth;
+                    canvas.height = newHeight;
+                }
                 gl.viewport(0, 0, canvas.width, canvas.height);
                 gl.uniform2f(uResolution, canvas.width, canvas.height);
             }
@@ -506,12 +513,29 @@
             window.glGetWidth = function() { return canvas.width; };
             window.glGetHeight = function() { return canvas.height; };
 
+            // Fullscreen function
+            window.glFullscreen = function() {
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                } else {
+                    canvas.requestFullscreen();
+                }
+            };
+
             // Mark as ready
             window.glReady = true;
 
             // Initialize
             window.addEventListener('resize', resize);
             resize();
+            gl.clear(gl.COLOR_BUFFER_BIT);
+
+            // Keyboard shortcut for fullscreen (F key)
+            window.addEventListener('keydown', function(e) {
+                if (e.key === 'f' || e.key === 'F') {
+                    window.glFullscreen();
+                }
+            });
 
             // Draw initial red square as demo
             window.glClear();
@@ -520,12 +544,20 @@
             const cy = canvas.height / 2;
             window.glFillRect(cx - 50, cy - 50, 100, 100);
 
-            console.log('WebGL window ready. API: glClear, glSetColor, glSetColorRGB, glFillRect, glLine, glLines, glFillTriangle, glFillCircle, glGetWidth, glGetHeight');
+            console.log('WebGL window ready. Press F for fullscreen. API: glClear, glSetColor, glSetColorRGB, glFillRect, glLine, glLines, glFillTriangle, glFillCircle, glFullscreen, glGetWidth, glGetHeight');
+
+            canvas.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+            });
         }
     <\/script>
 </body>
 </html>
 `;
+            // Close existing window if open
+            if (webglWindow && !webglWindow.closed) {
+                webglWindow.close();
+            }
             webglWindow = window.open('', 'WebGLTest', 'width=800,height=600,resizable=yes');
             webglWindow.document.write(webglContent);
             webglWindow.document.close();
@@ -1483,9 +1515,9 @@
             console.log('[CANVAS] Canvas resized to ' + width + 'x' + height);
 
             // Notify C code of canvas size change
-            if (wasmRuntimeReady && typeof Module !== 'undefined' && Module._mdep_on_window_resize) {
+            if (wasmRuntimeReady && typeof Module !== 'undefined' && Module._jscallback_on_window_resize) {
                 try {
-                    Module._mdep_on_window_resize(width, height);
+                    Module._jscallback_on_window_resize(width, height);
                     console.log('[CANVAS] Notified C code of resize');
                 } catch (e) {
                     console.error('[CANVAS] Error calling C callback:', e);
@@ -1510,10 +1542,10 @@
                 console.log('[CANVAS] Canvas initialized to ' + canvas.width + 'x' + canvas.height);
 
                 // Notify C code of canvas size (only if runtime is fully initialized)
-                if (wasmRuntimeReady && typeof Module !== 'undefined' && Module._mdep_on_window_resize) {
+                if (wasmRuntimeReady && typeof Module !== 'undefined' && Module._jscallback_on_window_resize) {
                     try {
-                        console.log('[CANVAS] Calling Module._mdep_on_window_resize(' + currentCanvasWidth + ', ' + currentCanvasHeight + ')');
-                        Module._mdep_on_window_resize(currentCanvasWidth, currentCanvasHeight);
+                        console.log('[CANVAS] Calling Module._jscallback_on_window_resize(' + currentCanvasWidth + ', ' + currentCanvasHeight + ')');
+                        Module._jscallback_on_window_resize(currentCanvasWidth, currentCanvasHeight);
                         console.log('[CANVAS] Successfully notified C code');
                     } catch (e) {
                         console.error('[CANVAS] Error calling C callback:', e);
