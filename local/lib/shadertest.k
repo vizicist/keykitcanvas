@@ -61,7 +61,7 @@ void main() {
 
 	if (p1 < 0 || p2 < 0) {
 		print("Failed to create shader passes!")
-		return
+		return()
 	}
 
 	# Set the pass order: pass1 renders to texture, pass2 reads it and renders to screen
@@ -100,7 +100,7 @@ void main() {
 
 	if (p < 0) {
 		print("Failed to create shader pass!")
-		return
+		return()
 	}
 
 	order = [p]
