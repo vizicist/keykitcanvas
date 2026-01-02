@@ -1,27 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(wc:*)",
-      "Bash(python create_dist.py:*)",
-      "Bash(winget show:*)",
-      "Bash(winget search:*)",
-      "Bash(winget install:*)",
-      "Bash(/c/Program Files/nodejs/node.exe -v)",
-      "Bash(/c/Program Files/nodejs/npm.cmd -v)",
-      "Bash(\"/c/Program Files/nodejs/node.exe\" -v)",
-      "Bash(\"/c/Program Files/nodejs/npm.cmd\" -v)",
-      "Bash(cat:*)",
-      "Bash(python build_wasm.py:*)",
-      "Bash(curl:*)",
-      "Bash(cmd.exe //c \"where caddy\")",
-      "Bash(python:*)",
-      "Bash(cmd.exe //c \"dir C:\\\\caddy* /s /b 2>nul || dir C:\\\\Users\\\\nosuc\\\\caddy* /s /b 2>nul || echo notfound\")",
-      "Bash(cmd.exe //c \"taskkill /IM caddy.exe /F 2>nul & dir C:\\\\caddy* /s /b 2>nul || dir C:\\\\Users\\\\nosuc\\\\caddy* /s /b 2>nul || echo notfound\")",
-      "Bash(\"C:\\\\Users\\\\nosuc\\\\AppData\\\\Local\\\\Microsoft\\\\WinGet\\\\Packages\\\\CaddyServer.Caddy_Microsoft.Winget.Source_8wekyb3d8bbwe\\\\caddy.exe\" file-server --browse --listen :8080 --root \"c:\\\\Users\\\\nosuc\\\\GitHub\\\\keykitcanvas\")",
-      "Bash(cmd.exe //c \"taskkill /IM caddy.exe /F\")",
-      "Bash(cmd.exe //c \"taskkill /IM caddy.exe /F 2>nul\")",
-      "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(*)",
+      "Edit",
+      "Write",
+      "Read"
     ]
   }
 }
