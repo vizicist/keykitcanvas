@@ -925,6 +925,7 @@ flushfin(void)
 		 * what's going on.
 		 */
 		fclose(Fin);
+		Fin = NULL;  /* Prevent double-close by callers who saved the file pointer */
 	}
 }
 
@@ -1541,8 +1542,15 @@ loadsymfile(Symbolp s,int pushit)
 	else
 		nestinstruct(cp);
 
-	popfin();
-	myfclose(f);
+	/* Check if flushfin() already closed the file during error handling.
+	 * If Fin is NULL, the file was closed by flushfin() and we shouldn't close again. */
+	{
+		int already_closed = (Fin == NULL);
+		popfin();
+		if ( !already_closed ) {
+			myfclose(f);
+		}
+	}
 
 	if ( isnoval(s->sd) ) {
 		eprint("Warning: no value for '%s' found in file '%s' !?\n",
@@ -1739,6 +1747,14 @@ MAIN(int argc,char **argv)
 		*Keypagepersistent = uniqstr(p);
 		*Initconfig = uniqstr(p);
 	}
+
+#ifdef __EMSCRIPTEN__
+	/* Check for initconfig from URL parameter (overrides environment variable) */
+	if ((p = mdep_initconfig()) != NULL) {
+		*Keypagepersistent = uniqstr(p);
+		*Initconfig = uniqstr(p);
+	}
+#endif
 
 	while ( argc > 1 && argv[1][0] == '-' ) {
 

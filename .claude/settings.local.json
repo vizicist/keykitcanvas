@@ -4,7 +4,11 @@
       "Bash(*)",
       "Edit",
       "Write",
-      "Read"
+      "Read",
+      "Bash(\"C:\\\\Users\\\\nosuc\\\\AppData\\\\Local\\\\Microsoft\\\\WinGet\\\\Packages\\\\CaddyServer.Caddy_Microsoft.Winget.Source_8wekyb3d8bbwe\\\\caddy.exe\" file-server --browse --listen :8080 --root \"c:\\\\Users\\\\nosuc\\\\GitHub\\\\keykitcanvas\")",
+      "Bash(python build_wasm.py:*)",
+      "Bash(git checkout:*)",
+      "Bash(python create_dist.py:*)"
     ]
   }
 }

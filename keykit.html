@@ -44,19 +44,19 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            width: 1024px;
+            width: 500px;
             margin: 0 auto;
             padding-bottom: 40px;
         }
 
         #canvas-container {
             position: relative;
-            width: 1024px;
-            min-width: 1024px;
-            max-width: 1024px;
-            height: 768px;
-            min-height: 768px;
-            max-height: 768px;
+            width: 500px;
+            min-width: 500px;
+            max-width: 500px;
+            height: 300px;
+            min-height: 300px;
+            max-height: 300px;
             margin: 20px 0;
             border: 3px solid #4CAF50;
             border-radius: 8px;
@@ -67,8 +67,8 @@
 
         #keykit-canvas {
             display: block;
-            width: 1024px;
-            height: 768px;
+            width: 500px;
+            height: 300px;
             /* No border-radius on canvas to avoid coordinate issues */
             /* Use auto for smooth text rendering instead of pixelated */
             image-rendering: auto;
@@ -124,7 +124,7 @@
             border-radius: 5px;
             padding: 15px;
             margin: 10px 0;
-            max-width: 1024px;
+            max-width: 400px;
             width: 100%;
         }
 
@@ -180,9 +180,10 @@
             <div style="display: flex; align-items: center; gap: 10px;">
                 <span style="color: #888; margin-right: 5px;">Size:</span>
                 <select id="canvas-size-select" onchange="var s = this.value.split('x'); setCanvasSize(parseInt(s[0]), parseInt(s[1]));" style="padding: 5px 10px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    <option value="500x300" selected>500x300</option>
                     <option value="640x480">640x480</option>
                     <option value="800x600">800x600</option>
-                    <option value="1024x768" selected>1024x768</option>
+                    <option value="1024x768">1024x768</option>
                     <option value="1200x800">1200x800</option>
                     <option value="1920x1080">1920x1080</option>
                 </select>
@@ -220,7 +221,7 @@
         </div>
 
         <div id="canvas-container">
-            <canvas id="keykit-canvas" width="1024" height="768" tabindex="0"></canvas>
+            <canvas id="keykit-canvas" width="500" height="300" tabindex="0"></canvas>
         </div>
 
         <div class="info-box">
@@ -940,15 +941,22 @@
                             name: 'libextra',
                             path: '/keykit/libextra',
                             manifest: 'libextra/libextra_manifest.json',
-                            enabled: true,
+                            enabled: false,
                             batchSize: 100,
                             description: 'Extra/experimental libraries'
                         }
                     ];
 
-                    // Check for URL parameter override
+                    // Check for URL parameter overrides
                     const urlParams = new URLSearchParams(window.location.search);
                     const keypathParam = urlParams.get('keypath');
+                    const initconfigParam = urlParams.get('initconfig');
+
+                    // Set Initconfig via Module property (retrieved by mdep_initconfig() in C)
+                    if (initconfigParam) {
+                        Module.initconfig = initconfigParam;
+                        console.log(`Setting Initconfig from URL parameter: ${initconfigParam}`);
+                    }
 
                     let keypath;
                     if (keypathParam) {
@@ -1689,8 +1697,8 @@
         };
 
         // Current canvas size
-        var currentCanvasWidth = 1024;
-        var currentCanvasHeight = 768;
+        var currentCanvasWidth = 500;
+        var currentCanvasHeight = 300;
 
         // Function to set canvas size (called by size buttons)
         function setCanvasSize(width, height) {
@@ -1736,7 +1744,7 @@
             container.style.maxHeight = height + 'px';
 
             // Update main container width
-            mainContainer.style.width = Math.max(width, 1024) + 'px';
+            mainContainer.style.width = Math.max(width, 400) + 'px';
 
             // Update button highlighting
             var buttons = document.querySelectorAll('.size-btn');

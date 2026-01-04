@@ -94,7 +94,7 @@ function dokeylocal() {
 		pref_name = preferred_outputs[n]
 		for ( portnum in outlist ) {
 			if ( outlist[portnum] == pref_name ) {
-				print("Found default output: "+pref_name)
+				# print("Found default output: "+pref_name)
 				outp = outport(pref_name)
 				mapport(0,outp)
 				break
@@ -110,7 +110,7 @@ function dokeylocal() {
 		pref_name = preferred_inputs[n]
 		for ( portnum in inlist ) {
 			if ( inlist[portnum] == pref_name ) {
-				print("Found default input: "+pref_name)
+				# print("Found default input: "+pref_name)
 				inp = inport(pref_name)
 				break
 			}

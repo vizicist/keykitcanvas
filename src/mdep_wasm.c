@@ -249,11 +249,11 @@ mdep_makepath(char *dirname, char *filename, char *result, int resultsize)
 void
 mdep_popup(char *s)
 {
-    fprintf(stderr, "POPUP: %s", s);
-    char *eol = s + strlen(s) - 1;
-    if ( *eol != '\n' ) {
-        fprintf(stderr, "\n");
-    }
+    // Show a modal popup in the browser
+    EM_ASM({
+        var msg = UTF8ToString($0);
+        alert(msg);
+    }, s);
 }
 
 extern void js_set_cursor(int cursorType);
@@ -1664,13 +1664,30 @@ mdep_keypath(void)
     }
 
     // Fallback to default if JavaScript configuration not available
-    return "/keykit/libcore;/keykit/libtools;/keykit/libextra;/keykit/libwind;/keykit/local/lib";
+    return "/keykit/libcore;/keykit/libtools;/keykit/local/lib";
 }
 
 char *
 mdep_musicpath(void)
 {
     return "/keykit/music";
+}
+
+char *
+mdep_initconfig(void)
+{
+    // Try to get Initconfig from JavaScript configuration (set in HTML via URL parameter)
+    char *js_initconfig = (char *)EM_ASM_PTR({
+        if (Module.initconfig) {
+            var len = lengthBytesUTF8(Module.initconfig) + 1;
+            var str = _malloc(len);
+            stringToUTF8(Module.initconfig, str, len);
+            return str;
+        }
+        return 0;
+    });
+
+    return js_initconfig;  // Returns NULL if not set
 }
 
 // Get host operating system name

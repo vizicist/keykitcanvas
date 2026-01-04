@@ -4458,6 +4458,10 @@ async function createWasm() {
       assert(ASM_CONSTS.hasOwnProperty(code), `No EM_ASM constant found at address ${code}.  The loaded WebAssembly file is likely out of sync with the generated JavaScript.`);
       return ASM_CONSTS[code](...args);
     };
+  var _emscripten_asm_const_int = (code, sigPtr, argbuf) => {
+      return runEmAsmFunction(code, sigPtr, argbuf);
+    };
+
   var _emscripten_asm_const_ptr = (code, sigPtr, argbuf) => {
       return runEmAsmFunction(code, sigPtr, argbuf);
     };
@@ -6777,7 +6781,9 @@ function checkIncomingModuleAPI() {
   ignoredModuleProp('fetchSettings');
 }
 var ASM_CONSTS = {
-  169384: () => { if (Module.keypath) { var len = lengthBytesUTF8(Module.keypath) + 1; var str = _malloc(len); stringToUTF8(Module.keypath, str, len); return str; } return 0; }
+  169352: ($0) => { var msg = UTF8ToString($0); alert(msg); },  
+ 169396: () => { if (Module.keypath) { var len = lengthBytesUTF8(Module.keypath) + 1; var str = _malloc(len); stringToUTF8(Module.keypath, str, len); return str; } return 0; },  
+ 169557: () => { if (Module.initconfig) { var len = lengthBytesUTF8(Module.initconfig) + 1; var str = _malloc(len); stringToUTF8(Module.initconfig, str, len); return str; } return 0; }
 };
 
 // Imports from the Wasm binary.
@@ -6924,6 +6930,8 @@ var wasmImports = {
   _abort_js: __abort_js,
   /** @export */
   _emscripten_throw_longjmp: __emscripten_throw_longjmp,
+  /** @export */
+  emscripten_asm_const_int: _emscripten_asm_const_int,
   /** @export */
   emscripten_asm_const_ptr: _emscripten_asm_const_ptr,
   /** @export */

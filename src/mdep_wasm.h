@@ -144,6 +144,7 @@ void mdep_putbitmap(int x0, int y0, Pbitmap pb);
 // File/path functions
 char *mdep_keypath(void);
 char *mdep_musicpath(void);
+char *mdep_initconfig(void);
 int mdep_shellexec(char *s);
 char *mdep_browse(char *desc, char *types, int mustexist);
 int mdep_help(char *fname, char *keyword);

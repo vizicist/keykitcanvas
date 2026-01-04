@@ -797,6 +797,7 @@ callfuncd(Symbolp s)
 			}
 			if ( isnoval(funcd) ) {
 				char *sn = symname(s);
+				strcpy(Msg1, "Undefined function");
 				if ( s != NULL )
 					sprintf(strend(Msg1)," named '%s'",sn);
 				if ( strcmp(sn,"keyrc") == 0 ) {
