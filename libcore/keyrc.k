@@ -72,7 +72,7 @@ function dokeylocal() {
  	# Open the first available input/output port from a preferred list
 
  	preferred_outputs = [
-		0="loopMIDI Port 1",     # loopMIDI
+		0="loopMIDI Port",       # loopMIDI (Port, not Port 1)
 		1="01. Internal MIDI",   # LoopBe
  		2="IAC Driver Bus 1",    # macOS
  		3="Springbeats vMIDI1",  # SBVMIDI

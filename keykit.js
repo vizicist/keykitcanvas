@@ -6781,9 +6781,9 @@ function checkIncomingModuleAPI() {
   ignoredModuleProp('fetchSettings');
 }
 var ASM_CONSTS = {
-  169352: ($0) => { var msg = UTF8ToString($0); alert(msg); },  
- 169396: () => { if (Module.keypath) { var len = lengthBytesUTF8(Module.keypath) + 1; var str = _malloc(len); stringToUTF8(Module.keypath, str, len); return str; } return 0; },  
- 169557: () => { if (Module.initconfig) { var len = lengthBytesUTF8(Module.initconfig) + 1; var str = _malloc(len); stringToUTF8(Module.initconfig, str, len); return str; } return 0; }
+  169368: ($0) => { var msg = UTF8ToString($0); alert(msg); },  
+ 169412: () => { if (Module.keypath) { var len = lengthBytesUTF8(Module.keypath) + 1; var str = _malloc(len); stringToUTF8(Module.keypath, str, len); return str; } return 0; },  
+ 169573: () => { if (Module.initconfig) { var len = lengthBytesUTF8(Module.initconfig) + 1; var str = _malloc(len); stringToUTF8(Module.initconfig, str, len); return str; } return 0; }
 };
 
 // Imports from the Wasm binary.
@@ -6797,6 +6797,8 @@ var _jscallback_on_mouse_move = Module['_jscallback_on_mouse_move'] = makeInvali
 var _jscallback_on_mouse_button = Module['_jscallback_on_mouse_button'] = makeInvalidEarlyAccess('_jscallback_on_mouse_button');
 var _jscallback_on_key_event = Module['_jscallback_on_key_event'] = makeInvalidEarlyAccess('_jscallback_on_key_event');
 var _jscallback_on_window_resize = Module['_jscallback_on_window_resize'] = makeInvalidEarlyAccess('_jscallback_on_window_resize');
+var _jscallback_keystr = Module['_jscallback_keystr'] = makeInvalidEarlyAccess('_jscallback_keystr');
+var _jscallback_keyvalue = Module['_jscallback_keyvalue'] = makeInvalidEarlyAccess('_jscallback_keyvalue');
 var _jscallback_on_nats_message = Module['_jscallback_on_nats_message'] = makeInvalidEarlyAccess('_jscallback_on_nats_message');
 var _jscallback_on_websocket_event = Module['_jscallback_on_websocket_event'] = makeInvalidEarlyAccess('_jscallback_on_websocket_event');
 var _emscripten_stack_get_end = makeInvalidEarlyAccess('_emscripten_stack_get_end');
@@ -6837,6 +6839,8 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports['jscallback_on_mouse_button'] != 'undefined', 'missing Wasm export: jscallback_on_mouse_button');
   assert(typeof wasmExports['jscallback_on_key_event'] != 'undefined', 'missing Wasm export: jscallback_on_key_event');
   assert(typeof wasmExports['jscallback_on_window_resize'] != 'undefined', 'missing Wasm export: jscallback_on_window_resize');
+  assert(typeof wasmExports['jscallback_keystr'] != 'undefined', 'missing Wasm export: jscallback_keystr');
+  assert(typeof wasmExports['jscallback_keyvalue'] != 'undefined', 'missing Wasm export: jscallback_keyvalue');
   assert(typeof wasmExports['jscallback_on_nats_message'] != 'undefined', 'missing Wasm export: jscallback_on_nats_message');
   assert(typeof wasmExports['jscallback_on_websocket_event'] != 'undefined', 'missing Wasm export: jscallback_on_websocket_event');
   assert(typeof wasmExports['emscripten_stack_get_end'] != 'undefined', 'missing Wasm export: emscripten_stack_get_end');
@@ -6873,6 +6877,8 @@ function assignWasmExports(wasmExports) {
   _jscallback_on_mouse_button = Module['_jscallback_on_mouse_button'] = createExportWrapper('jscallback_on_mouse_button', 5);
   _jscallback_on_key_event = Module['_jscallback_on_key_event'] = createExportWrapper('jscallback_on_key_event', 5);
   _jscallback_on_window_resize = Module['_jscallback_on_window_resize'] = createExportWrapper('jscallback_on_window_resize', 2);
+  _jscallback_keystr = Module['_jscallback_keystr'] = createExportWrapper('jscallback_keystr', 1);
+  _jscallback_keyvalue = Module['_jscallback_keyvalue'] = createExportWrapper('jscallback_keyvalue', 1);
   _jscallback_on_nats_message = Module['_jscallback_on_nats_message'] = createExportWrapper('jscallback_on_nats_message', 2);
   _jscallback_on_websocket_event = Module['_jscallback_on_websocket_event'] = createExportWrapper('jscallback_on_websocket_event', 2);
   _emscripten_stack_get_end = wasmExports['emscripten_stack_get_end'];

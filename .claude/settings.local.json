@@ -8,7 +8,9 @@
       "Bash(\"C:\\\\Users\\\\nosuc\\\\AppData\\\\Local\\\\Microsoft\\\\WinGet\\\\Packages\\\\CaddyServer.Caddy_Microsoft.Winget.Source_8wekyb3d8bbwe\\\\caddy.exe\" file-server --browse --listen :8080 --root \"c:\\\\Users\\\\nosuc\\\\GitHub\\\\keykitcanvas\")",
       "Bash(python build_wasm.py:*)",
       "Bash(git checkout:*)",
-      "Bash(python create_dist.py:*)"
+      "Bash(python create_dist.py:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd JavaScript-to-KeyKit interface \\(keystr/keyvalue\\)\n\n- Add window.keystr\\(code\\) to execute KeyKit code from JavaScript\n  - Clears KeystrOutput, schedules code for async execution\n  - Code runs in KeyKit task scheduler loop\n- Add window.keyvalue\\(varname\\) to read KeyKit global variables\n  - Uses uniqstr\\(\\) for proper symbol table lookup\n  - Returns string representation of variable value\n- Add KeystrOutput global string variable for passing results\n- Add test buttons to keykit.html for keystr/keyvalue\n- Export jscallback_keystr and jscallback_keyvalue in build_wasm.py\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }

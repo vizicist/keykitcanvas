@@ -502,6 +502,74 @@ void jscallback_on_window_resize(int width, int height)
     last_canvas_height = height;
 }
 
+// Callback from JavaScript to execute KeyKit code
+// This allows JavaScript to call KeyKit functions
+// Note: Code execution is asynchronous - it schedules the code to run
+// in the KeyKit task scheduler. Use keyvalue() to retrieve results later.
+EMSCRIPTEN_KEEPALIVE
+void jscallback_keystr(const char *code)
+{
+    if (code == NULL || code[0] == '\0') {
+        return;
+    }
+
+    // Clear KeystrOutput before execution
+    extern Symstrp KeystrOutput;
+    *KeystrOutput = uniqstr("");
+
+    // Schedule the KeyKit code for execution
+    // The code will run during the normal task scheduler loop
+    keystr((char *)code);
+}
+
+// External declarations for symbol table functions
+extern Symbolp lookup(char *p);
+extern Datum *symdataptr(Symbolp s);
+extern char *datumstr(Datum d);
+extern char *uniqstr(char *p);
+// Note: isnoval is a macro defined in key.h, not a function
+
+// Callback from JavaScript to get the value of a KeyKit global variable
+// Returns the value as a string, or NULL if not found/undefined
+EMSCRIPTEN_KEEPALIVE
+const char *jscallback_keyvalue(const char *varname)
+{
+    static char *result_buffer = NULL;
+
+    if (varname == NULL || varname[0] == '\0') {
+        return NULL;
+    }
+
+    // Look up the symbol - need to use uniqstr for proper lookup
+    char *uname = uniqstr((char *)varname);
+    Symbolp s = lookup(uname);
+    if (s == NULL) {
+        return NULL;
+    }
+
+    // Get the datum pointer
+    Datum *dp = symdataptr(s);
+    if (dp == NULL) {
+        return NULL;
+    }
+
+    if (isnoval(*dp)) {
+        return NULL;
+    }
+
+    // Convert to string - datumstr returns a Symstr (interned string)
+    char *str = datumstr(*dp);
+
+    // Free previous result if any
+    if (result_buffer != NULL) {
+        free(result_buffer);
+    }
+
+    // Make a copy that JavaScript can read
+    result_buffer = strdup(str);
+    return result_buffer;
+}
+
 // Helper functions to check modifier key state
 int mdep_ctrl_down(void)
 {

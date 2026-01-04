@@ -224,6 +224,15 @@
             <canvas id="keykit-canvas" width="500" height="300" tabindex="0"></canvas>
         </div>
 
+        <div style="margin-top: 10px;">
+            <button onclick="window.keystr('foofunc()');" style="padding: 5px 15px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                Test keystr
+            </button>
+            <button onclick="alert('KeystrOutput = ' + window.keyvalue('KeystrOutput'));" style="padding: 5px 15px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">
+                Test keyvalue
+            </button>
+        </div>
+
         <div class="info-box">
             <h3>About KeyKit</h3>
             <p>
@@ -1606,6 +1615,50 @@
                 // Mark runtime as ready after initialization completes
                 wasmRuntimeReady = true;
                 console.log('[' + new Date().toISOString() + '] WASM runtime fully initialized');
+
+                // Create global keystr function for executing KeyKit code from JavaScript
+                // Note: Execution is asynchronous. Use keyvalue('KeystrOutput') to get results.
+                window.keystr = function(code) {
+                    if (!wasmRuntimeReady) {
+                        console.error('KeyKit not ready yet');
+                        return false;
+                    }
+                    if (typeof code !== 'string' || code.length === 0) {
+                        console.error('keystr requires a non-empty string argument');
+                        return false;
+                    }
+                    try {
+                        Module.ccall('jscallback_keystr', null, ['string'], [code]);
+                        return true;
+                    } catch (e) {
+                        console.error('Error calling keystr:', e);
+                        return false;
+                    }
+                };
+
+                // Create global keyvalue function for getting KeyKit variable values
+                window.keyvalue = function(varname) {
+                    if (!wasmRuntimeReady) {
+                        console.error('KeyKit not ready yet');
+                        return null;
+                    }
+                    if (typeof varname !== 'string' || varname.length === 0) {
+                        console.error('keyvalue requires a non-empty string argument');
+                        return null;
+                    }
+                    try {
+                        var ptr = Module.ccall('jscallback_keyvalue', 'number', ['string'], [varname]);
+                        if (ptr === 0) {
+                            return null;  // Variable not found or undefined
+                        }
+                        return Module.UTF8ToString(ptr);
+                    } catch (e) {
+                        console.error('Error calling keyvalue:', e);
+                        return null;
+                    }
+                };
+
+                console.log('[KeyKit] window.keystr() and window.keyvalue() functions available');
             }],
             print: (function() {
                 var element = document.getElementById('output');

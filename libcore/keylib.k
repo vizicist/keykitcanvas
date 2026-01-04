@@ -616,6 +616,7 @@
 #library util2.k setdefaultchancolormap
 #library util2.k chancolortestphrase
 #library util2.k forwardmidi
+#library util2.k testerror
 #library warrange.k warrange
 #library wconsole.k wconsole
 #library windobje.k window

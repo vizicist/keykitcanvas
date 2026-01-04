@@ -594,10 +594,10 @@ warning(char *fmt,...)
 	/* executing, since that's unlikely to be of any use. */
 	if ( strcmp(fmt,"syntax error") != 0 ) {
 		if ( T != NULL )
-			sprintf(strend(Wmsg)," \nwhile executing near line %ld in file %s",T->linenum,(T->filename?T->filename:"??"));
+			sprintf(strend(Wmsg)," while executing near line %ld in file %s",T->linenum,(T->filename?T->filename:"??"));
 	}
 	if ( Infile!=Tty && Infile!=NULL && *Infile != '\0' )
-		sprintf(strend(Wmsg)," \nwhile reading %s near line %d",Infile,Lineno);
+		sprintf(strend(Wmsg)," while reading %s near line %d",Infile,Lineno);
 	strcat(Wmsg,"\n");
 	eprint(Wmsg);
 	tsync();
@@ -628,10 +628,10 @@ popupwarning(char *fmt,...)
 	/* executing, since that's unlikely to be of any use. */
 	if ( strcmp(fmt,"syntax error") != 0 ) {
 		if ( T != NULL )
-			sprintf(strend(Wmsg)," \nwhile executing near line %ld in file %s",T->linenum,T->filename);
+			sprintf(strend(Wmsg)," while executing near line %ld in file %s",T->linenum,T->filename);
 	}
 	if ( Infile!=Tty && Infile!=NULL && *Infile != '\0' )
-		sprintf(strend(Wmsg)," \nwhile reading %s near line %d",Infile,Lineno);
+		sprintf(strend(Wmsg)," while reading %s near line %d",Infile,Lineno);
 	strcat(Wmsg,"\n");
 	mdep_popup(Wmsg);
 }

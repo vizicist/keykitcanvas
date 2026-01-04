@@ -865,7 +865,7 @@ static struct biphr {
 
 Symstrp Keypath, Machine, Keyerasechar, Keykillchar, Keyroot;
 Symstrp Printsep, Printend, Musicpath;
-Symstrp Pathsep, Dirseparator, Devmidi, Version, Initconfig, Keypagepersistent, Nullvalsymp;
+Symstrp Pathsep, Dirseparator, Devmidi, Version, Initconfig, Keypagepersistent, Nullvalsymp, KeystrOutput;
 Symstrp Fontname, Icon, Windowsys, Drawwindow, Picktrack;
 
 static struct bistr {
@@ -891,6 +891,7 @@ static struct bistr {
 	{ "Icon", "", &Icon },
 	{ "Windowsys", "", &Windowsys },
 	{ "Nullval", "", &Nullvalsymp },
+	{ "KeystrOutput", "", &KeystrOutput },
 	{ 0, 0, 0 }
 };
 

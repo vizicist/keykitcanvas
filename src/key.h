@@ -1109,7 +1109,7 @@ extern Symlongp Deftimeout;
 extern Symlongp Debuggesture;
 extern Symlongp Chancolors;
 extern Phrasepp Currphr, Recphr;
-extern Symstrp Keypath, Musicpath, Keyroot, Initconfig, Keypagepersistent;
+extern Symstrp Keypath, Musicpath, Keyroot, Initconfig, Keypagepersistent, KeystrOutput;
 extern Symstrp Printsep, Printend, Pathsep, Dirseparator, Devmidi, Machine;
 extern int Dbg, Inerror, Usestdio, ReadytoEval;
 extern void (*Fatalfunc)(char *);

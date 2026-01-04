@@ -64,7 +64,7 @@ def compile_wasm():
         "-s", "ASYNCIFY_IMPORTS=['js_sync_from_real']",  # Functions that can suspend
         "-s", "SUPPORT_LONGJMP=emscripten",  # Enable setjmp/longjmp support (JS-based, compatible with ASYNCIFY)
         "-s", "FORCE_FILESYSTEM=1",  # Enable virtual filesystem
-        "-s", "EXPORTED_FUNCTIONS=['_main','_jscallback_on_midi_message','_jscallback_on_mouse_move','_jscallback_on_mouse_button','_jscallback_on_key_event','_jscallback_on_window_resize','_jscallback_on_nats_message','_jscallback_on_websocket_event']",
+        "-s", "EXPORTED_FUNCTIONS=['_main','_jscallback_on_midi_message','_jscallback_on_mouse_move','_jscallback_on_mouse_button','_jscallback_on_key_event','_jscallback_on_window_resize','_jscallback_on_nats_message','_jscallback_on_websocket_event','_jscallback_keystr','_jscallback_keyvalue']",
         "-s", "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','getValue','setValue','UTF8ToString','FS','IDBFS','HEAPU8']",
         "-lidbfs.js",  # Include IDBFS library
         "-s", "ASSERTIONS=1",  # Enable runtime assertions
