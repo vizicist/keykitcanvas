@@ -224,6 +224,10 @@
             <canvas id="keykit-canvas" width="500" height="300" tabindex="0"></canvas>
         </div>
 
+        <div id="cables-container" style="width: 500px; height: 300px; margin: 20px 0; border: 3px solid #4CAF50; border-radius: 8px; box-shadow: 0 4px 20px rgba(76, 175, 80, 0.3); background: #000;">
+            <canvas id="cables-canvas" width="500" height="300" style="display: block;"></canvas>
+        </div>
+
         <div style="margin-top: 10px;">
             <button onclick="window.keystr('foofunc()');" style="padding: 5px 15px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">
                 Test keystr
@@ -1756,6 +1760,7 @@
         // Function to set canvas size (called by size buttons)
         function setCanvasSize(width, height) {
             var canvas = document.getElementById('keykit-canvas');
+            var cablesCanvas = document.getElementById('cables-canvas');
             var container = document.getElementById('canvas-container');
             var mainContainer = document.getElementById('container');
             if (!canvas || !container) {
@@ -1767,11 +1772,28 @@
             currentCanvasWidth = width;
             currentCanvasHeight = height;
 
-            // Update canvas dimensions (this clears the canvas and resets context state)
+            // Update KeyKit canvas dimensions (this clears the canvas and resets context state)
             canvas.width = width;
             canvas.height = height;
             canvas.style.width = width + 'px';
             canvas.style.height = height + 'px';
+
+            // Update cables.gl canvas dimensions
+            var cablesContainer = document.getElementById('cables-container');
+            if (cablesCanvas) {
+                cablesCanvas.width = width;
+                cablesCanvas.height = height;
+                cablesCanvas.style.width = width + 'px';
+                cablesCanvas.style.height = height + 'px';
+                // Notify cables.gl of resize if patch is loaded
+                if (window.cablesPatch && window.cablesPatch.cgl) {
+                    window.cablesPatch.cgl.setSize(width, height);
+                }
+            }
+            if (cablesContainer) {
+                cablesContainer.style.width = width + 'px';
+                cablesContainer.style.height = height + 'px';
+            }
 
             // Restore canvas context state after resize (canvas resize resets all context properties)
             var ctx = canvas.getContext('2d');
@@ -1871,7 +1893,51 @@
             console.error('JavaScript Error:', e.message);
             console.error('Stack:', e.error?.stack || new Error().stack);
         });
+
+        // cables.gl initialization
+        var cablesInitialized = false;
+        var cablesPatch = null;
+
+        function initCablesGL() {
+            if (cablesInitialized) return;
+
+            document.addEventListener("CABLES.jsLoaded", function(event) {
+                console.log('[cables.gl] JS loaded, initializing patch...');
+
+                cablesPatch = new CABLES.Patch({
+                    patch: CABLES.exportedPatch,
+                    prefixAssetPath: "cables/",
+                    assetPath: "cables/assets/",
+                    jsPath: "cables/lib/",
+                    glCanvasId: "cables-canvas",
+                    glCanvasResizeToWindow: false,
+                    onError: function(initiator, ...args) {
+                        console.error("[cables.gl error]", initiator, ...args);
+                    },
+                    onPatchLoaded: function(patch) {
+                        console.log('[cables.gl] Patch initialized');
+                    },
+                    onFinishedLoading: function(patch) {
+                        console.log('[cables.gl] Patch finished loading');
+                        cablesInitialized = true;
+                        // Expose patch globally for KeyKit integration
+                        window.cablesPatch = patch;
+                    },
+                    canvas: { alpha: true, premultipliedAlpha: true }
+                });
+            });
+        }
+
+        // Initialize cables.gl when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initCablesGL);
+        } else {
+            initCablesGL();
+        }
     </script>
+
+    <!-- cables.gl patch (must load before keykit.js to ensure CABLES.jsLoaded event fires) -->
+    <script type="text/javascript" src="cables/lib/patch.js" async></script>
 
     <script async src="keykit.js"></script>
 </body>

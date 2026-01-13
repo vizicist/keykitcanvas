@@ -1,0 +1,5 @@
+{
+  "devDependencies": {
+    "@cables/cables": "^0.23.0"
+  }
+}
